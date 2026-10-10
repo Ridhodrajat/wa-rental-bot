@@ -51,7 +51,6 @@ export async function startWhatsApp(): Promise<WASocket> {
   sock = makeWASocket({
     version,
     logger: logger.child({ module: 'baileys' }) as any,
-    printQRInTerminal: true,
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger as any),
