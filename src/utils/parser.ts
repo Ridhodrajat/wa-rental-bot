@@ -52,7 +52,12 @@ export function parseCommand(
 }
 
 export function extractJidNumber(jid: string): string {
-  return jid.replace(/[^0-9]/g, '');
+  if (!jid) return '';
+  // Buang bagian setelah ':' (device suffix) dan '@' (server)
+  // Contoh: 6289510214771:12@s.whatsapp.net -> 6289510214771
+  const beforeAt = jid.split('@')[0];
+  const numberPart = beforeAt.split(':')[0];
+  return numberPart.replace(/[^0-9]/g, '');
 }
 
 export function isJidGroup(jid: string): boolean {

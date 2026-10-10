@@ -37,6 +37,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     if (groupMetadata) {
       isAdminUser = isGroupAdmin(senderJid, groupMetadata);
       isBotAdminUser = isBotGroupAdmin(sock.user!.id, groupMetadata);
+      // Daftarkan grup ke database agar FK rentals valid
+      GroupRepository.upsertGroup(chatJid, groupMetadata.subject || 'Unknown Group');
     }
   }
 
@@ -75,7 +77,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     }
 
     // Cek rental aktif (kecuali owner commands dan info)
-    if (!['owner', 'pay', 'ceksewa', 'listsewa', 'bot'].includes(parsed.commandName)) {
+    if (!['owner', 'pay', 'ceksewa', 'listsewa', 'bot', 'addsewa', 'delsewa', 'setpay', 'cekmenu'].includes(parsed.commandName)) {
       if (isGroup && !RentalService.isRentalActive(chatJid)) {
         await reply('❌ Grup ini belum terdaftar atau masa sewa sudah berakhir.');
         return;

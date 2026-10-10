@@ -21,7 +21,21 @@ export async function onConnectionUpdate(
   const { connection, lastDisconnect, qr } = update;
 
   if (qr) {
-    logger.info('QR Code ditampilkan di terminal');
+    logger.info('QR Code tersedia, tampilkan di terminal:');
+    console.log('\n========== SCAN QR CODE ==========\n');
+    
+    // Import qrcode-terminal on-demand
+    try {
+      const QRCode = require('qrcode-terminal');
+      QRCode.generate(qr, { small: true });
+    } catch (error) {
+      // Fallback: tampilkan URL untuk generate QR manual
+      logger.warn('qrcode-terminal tidak tersedia, gunakan QR generator online');
+      console.log('\nBuka link ini untuk generate QR code:');
+      console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}\n`);
+    }
+    
+    console.log('\n==================================\n');
   }
 
   if (connection === 'connecting') {
