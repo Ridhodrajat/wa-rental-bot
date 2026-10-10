@@ -1,0 +1,109 @@
+export type RentalStatus = 'ACTIVE' | 'EXPIRED_GRACE' | 'DELETED';
+
+export interface GroupRecord {
+  group_id: string; // JID WhatsApp grup (contoh: 1203630123456789@g.us)
+  group_name: string;
+  joined_at: string; // ISO String UTC
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RentalRecord {
+  id: number;
+  group_id: string;
+  status: RentalStatus;
+  expires_at: string; // ISO String UTC
+  grace_until: string; // ISO String UTC (expires_at + 30 days)
+  created_by: string; // Owner number
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RentalHistoryRecord {
+  id: number;
+  group_id: string;
+  action: 'CREATE' | 'EXTEND' | 'EXPIRE' | 'DELETE' | 'RESTORE';
+  days_added: number | null;
+  previous_expires_at: string | null;
+  new_expires_at: string | null;
+  performed_by: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface ProductRecord {
+  id: number;
+  group_id: string;
+  name: string; // Normalized (lowercase) untuk matching
+  original_name: string; // Case asli saat diinput
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransactionTemplateRecord {
+  group_id: string;
+  proses_template: string | null;
+  done_template: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WelcomeGoodbyeRecord {
+  group_id: string;
+  welcome_enabled: number; // 0 or 1
+  welcome_template: string | null;
+  goodbye_enabled: number; // 0 or 1
+  goodbye_template: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModerationSettingsRecord {
+  group_id: string;
+  antiwame_mode: number; // 0=off, 1=warn, 2=kick
+  antilink_mode: number; // 0=off, 1=warn, 2=kick
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupSettingsRecord {
+  group_id: string;
+  custom_data: string | null; // JSON string untuk setbot / updatesetbot
+  jeda_ms: number; // Jeda default operasi (ms)
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentConfigRecord {
+  id: number;
+  content: string;
+  updated_by: string;
+  updated_at: string;
+}
+
+export interface UserAfkRecord {
+  group_id: string;
+  user_jid: string;
+  reason: string | null;
+  start_time: string; // ISO String UTC
+}
+
+export type Role = 'OWNER' | 'GROUP_ADMIN' | 'GROUP_MEMBER' | 'UNAUTHORIZED';
+
+export interface CommandContext {
+  chatJid: string;
+  senderJid: string;
+  senderNumber: string;
+  isGroup: boolean;
+  isOwner: boolean;
+  isAdmin: boolean;
+  isBotAdmin: boolean;
+  body: string;
+  commandName: string;
+  args: string[];
+  fullArgs: string;
+  mentionedJids: string[];
+  quotedMsg?: any;
+  msg: any;
+}
