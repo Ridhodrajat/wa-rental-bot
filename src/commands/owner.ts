@@ -147,6 +147,7 @@ export async function handleListSewa(ctx: CommandContext, reply: ReplyFn): Promi
   }
 
   const { RentalRepository } = await import('../database/repositories/rentalRepository');
+  const { GroupRepository } = await import('../database/repositories/groupRepository');
   const rentals = RentalRepository.getAll();
 
   if (rentals.length === 0) {
@@ -157,7 +158,9 @@ export async function handleListSewa(ctx: CommandContext, reply: ReplyFn): Promi
   let text = `📋 *Daftar Seluruh Rental (${rentals.length})*\n\n`;
   for (let i = 0; i < rentals.length; i++) {
     const r = rentals[i];
-    text += `${i + 1}. ${r.group_id}\n`;
+    const group = GroupRepository.getGroupById(r.group_id);
+    const groupName = group?.group_name?.trim() || r.group_id;
+    text += `${i + 1}. ${groupName}\n`;
     text += `   Status: ${r.status}\n`;
     text += `   Exp: ${formatToTimezone(r.expires_at)}\n`;
     text += `   Sisa: ${humanRemainingTime(r.expires_at)}\n\n`;

@@ -35,6 +35,48 @@ function preview(template: string, ctx: CommandContext): string {
   return text;
 }
 
+/**
+ * Resolve template transaksi berdasarkan pesan yang di-reply oleh admin.
+ * - @user       -> tag orang yang chat-nya di-reply (fallback: pengirim command)
+ * - @produk     -> caption/teks pesan yang di-reply (fallback: "-")
+ * - @deskripsi  -> caption/teks pesan yang di-reply (fallback: "-")
+ */
+function resolveTransaction(
+  template: string,
+  ctx: CommandContext
+): { text: string; mentions: string[] } {
+  const targetJid = ctx.quotedParticipant || ctx.senderJid;
+  const targetNumber = displayNameFromJid(targetJid);
+  const note = (ctx.quotedText && ctx.quotedText.trim()) || '-';
+
+  return resolveTemplate(template, {
+    user: targetNumber,
+    userJid: targetJid,
+    groupName: ctx.groupName ?? 'Grup',
+    product: note,
+    description: note,
+  });
+}
+
+/**
+ * Kirim template transaksi (proses/done) langsung ke grup.
+ */
+async function sendTransaction(
+  ctx: CommandContext,
+  reply: ReplyFn,
+  feature: 'proses' | 'done',
+  template: string | null,
+  enabled: boolean | undefined
+): Promise<void> {
+  if (enabled === false) {
+    await reply(`ℹ️ Fitur *${feature}* sedang dimatikan. Aktifkan dengan *.${feature} on*.`);
+    return;
+  }
+  const finalTemplate = template ?? getDefaultTemplate(feature);
+  const { text, mentions } = resolveTransaction(finalTemplate, ctx);
+  await reply(text, { mentions });
+}
+
 // ============ Proses ============
 
 export async function handleProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
@@ -66,17 +108,14 @@ export async function handleProses(ctx: CommandContext, reply: ReplyFn): Promise
   if (arg === 'preview') {
     const current = TransactionTemplateRepository.get(ctx.chatJid);
     const template = current?.proses_template ?? getDefaultTemplate('proses');
-    await reply(`🔍 *Preview Proses:*\n\n${preview(template, ctx)}`);
+    const { text } = resolveTransaction(template, ctx);
+    await reply(`🔍 *Preview Proses:*\n\n${text}`);
     return;
   }
 
+  // Tanpa argumen: kirim template proses langsung (tag orang yang di-reply)
   const current = TransactionTemplateRepository.get(ctx.chatJid);
-  const status = current?.proses_enabled ? '🟢 ON' : '🔴 OFF';
-  const template = current?.proses_template ?? getDefaultTemplate('proses');
-  await reply(
-    `⏳ *Proses*\nStatus: ${status}\n\n*Template saat ini:*\n${template}\n\n` +
-    `Ubah dengan: *.setproses <nomor|teks>*`
-  );
+  await sendTransaction(ctx, reply, 'proses', current?.proses_template ?? null, current?.proses_enabled !== 0);
 }
 
 export async function handleSetProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
@@ -153,17 +192,14 @@ export async function handleDone(ctx: CommandContext, reply: ReplyFn): Promise<v
   if (arg === 'preview') {
     const current = TransactionTemplateRepository.get(ctx.chatJid);
     const template = current?.done_template ?? getDefaultTemplate('done');
-    await reply(`🔍 *Preview Done:*\n\n${preview(template, ctx)}`);
+    const { text } = resolveTransaction(template, ctx);
+    await reply(`🔍 *Preview Done:*\n\n${text}`);
     return;
   }
 
+  // Tanpa argumen: kirim template done langsung (tag orang yang di-reply)
   const current = TransactionTemplateRepository.get(ctx.chatJid);
-  const status = current?.done_enabled ? '🟢 ON' : '🔴 OFF';
-  const template = current?.done_template ?? getDefaultTemplate('done');
-  await reply(
-    `✅ *Done*\nStatus: ${status}\n\n*Template saat ini:*\n${template}\n\n` +
-    `Ubah dengan: *.setdone <nomor|teks>*`
-  );
+  await sendTransaction(ctx, reply, 'done', current?.done_template ?? null, current?.done_enabled !== 0);
 }
 
 export async function handleSetDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {

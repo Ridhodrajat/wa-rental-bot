@@ -266,7 +266,8 @@ export async function replyProduct(
   if (!product) return false;
 
   const imageAbs = resolveMediaPath(product.image_path);
-  const caption = `${product.original_name}\n\n${product.description}`;
+  // Tampilkan deskripsi saja (tanpa nama produk) sesuai permintaan
+  const caption = product.description;
 
   if (imageAbs) {
     await reply(caption, { imagePath: imageAbs });
