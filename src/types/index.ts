@@ -137,6 +137,8 @@ export interface CommandContext {
   fullArgs: string;
   mentionedJids: string[];
   quotedMsg?: any;
+  quotedParticipant?: string; // JID pengirim pesan yang di-reply
+  quotedText?: string; // Teks/caption dari pesan yang di-reply
   msg: any;
   groupName?: string;
 }

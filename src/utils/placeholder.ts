@@ -35,8 +35,16 @@ export function resolveTemplate(
 
   const now = new Date();
 
+  // @user dirender sebagai @<nomor> agar menjadi tag/mention yang valid.
+  // Jika tidak ada userJid (tanpa mention), gunakan teks apa adanya.
+  const userReplacement = ctx.user
+    ? ctx.userJid
+      ? `@${ctx.user}`
+      : ctx.user
+    : '';
+
   const replacements: Record<string, string> = {
-    '@user': ctx.user ?? '',
+    '@user': userReplacement,
     '@namagrup': ctx.groupName ?? '',
     '@admin': ctx.admin ?? '',
     '@tanggal': formatWibDate(now),

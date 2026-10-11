@@ -108,6 +108,21 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     }
   };
 
+  // Ambil info pesan yang di-reply (quoted)
+  const contextInfo =
+    msg.message?.extendedTextMessage?.contextInfo ||
+    msg.message?.imageMessage?.contextInfo ||
+    msg.message?.videoMessage?.contextInfo ||
+    null;
+  const quotedMsg = contextInfo?.quotedMessage ?? undefined;
+  const quotedParticipant: string | undefined = contextInfo?.participant ?? undefined;
+  const quotedText: string | undefined =
+    quotedMsg?.conversation ||
+    quotedMsg?.extendedTextMessage?.text ||
+    quotedMsg?.imageMessage?.caption ||
+    quotedMsg?.videoMessage?.caption ||
+    undefined;
+
   // Parse command
   const parsed = parseCommand(body, getCommandNames());
 
@@ -160,7 +175,9 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       args: parsed.args,
       fullArgs: parsed.fullArgs,
       mentionedJids: msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [],
-      quotedMsg: msg.message?.extendedTextMessage?.contextInfo?.quotedMessage,
+      quotedMsg,
+      quotedParticipant,
+      quotedText,
       msg,
       groupName,
     };
