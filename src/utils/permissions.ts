@@ -13,10 +13,10 @@ export function collectSenderJids(msg: any): string[] {
   
   const jids = [
     key.participant,
-    key.participantAlt,
+    key.participantPn,
+    key.participantLid,
     key.senderPn,
     key.senderLid,
-    key.remoteJidAlt,
     key.remoteJid,
     key.fromMe ? null : key.participant || key.remoteJid,
   ].filter((j): j is string => typeof j === 'string' && j.length > 0);
