@@ -365,16 +365,18 @@ pm2 start wa-rental-bot
 2. Apakah bot sudah terkoneksi? (`pm2 logs`)
 3. Apakah user punya hak akses? (Admin/Owner untuk command tertentu)
 
-### Better-sqlite3 build error
+### Error `node:sqlite` tidak ditemukan / butuh flag
 
-**Solusi:** Install build tools
+**Penyebab:** Versi Node.js terlalu lama.
+
+**Solusi:** Gunakan Node.js 22.5+ (dengan flag) atau 24 LTS (tanpa flag).
 
 ```bash
-# Ubuntu/Debian
-sudo apt install -y build-essential python3
+node -v   # pastikan >= v22.5.0
 
-# Rebuild
-npm rebuild better-sqlite3
+# Jika Node 22, jalankan dengan flag:
+node --experimental-sqlite dist/index.js
+# atau: npm run start:sqlite
 ```
 
 ## 📊 Monitoring & Maintenance
