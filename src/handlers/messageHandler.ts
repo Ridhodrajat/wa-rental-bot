@@ -153,7 +153,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     if (isGroup && RentalService.isRentalActive(chatJid)) {
       const product = ProductRepository.findByName(chatJid, body);
       if (product) {
-        await reply(`📦 *${product.original_name}*\n${product.description}`);
+        await reply(product.description);
       }
     }
   }

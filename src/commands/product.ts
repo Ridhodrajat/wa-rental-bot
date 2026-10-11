@@ -21,7 +21,7 @@ export async function handleList(ctx: CommandContext, reply: (text: string) => P
   let text = `📦 *Katalog Produk (${products.length})*\n\n`;
   for (let i = 0; i < products.length; i++) {
     const p = products[i];
-    text += `${i + 1}. *${p.original_name}*\n   ${p.description}\n\n`;
+    text += `${i + 1}. ${p.original_name}\n`;
   }
 
   await reply(text.trim());
@@ -38,18 +38,22 @@ export async function handleAddList(ctx: CommandContext, reply: (text: string) =
     return;
   }
 
-  // Format: addlist nama_produk|deskripsi
-  const parts = ctx.fullArgs.split('|');
-  if (parts.length < 2) {
+  // Format: addlist nama_produk@deskripsi atau nama_produk|deskripsi
+  let parts: string[];
+  if (ctx.fullArgs.includes('@')) {
+    parts = ctx.fullArgs.split('@');
+  } else if (ctx.fullArgs.includes('|')) {
+    parts = ctx.fullArgs.split('|');
+  } else {
     await reply(
-      '❌ Format salah.\nGunakan: *.addlist nama_produk|deskripsi*\n' +
-      'Contoh: *.addlist YouTube Premium|YouTube Premium 1 Bulan - Rp50.000*'
+      '❌ Format salah.\nGunakan: *.addlist nama_produk@deskripsi* atau *.addlist nama_produk|deskripsi*\n' +
+      'Contoh:\n.addlist yt@YouTube Premium 1 Bulan - Rp50.000'
     );
     return;
   }
 
   const name = parts[0].trim();
-  const description = parts.slice(1).join('|').trim();
+  const description = parts.slice(1).join(ctx.fullArgs.includes('@') ? '@' : '|');
 
   if (!name || !description) {
     await reply('❌ Nama produk dan deskripsi tidak boleh kosong.');
@@ -77,18 +81,22 @@ export async function handleUpdateList(ctx: CommandContext, reply: (text: string
     return;
   }
 
-  // Format: updatelist nama_produk|deskripsi_baru
-  const parts = ctx.fullArgs.split('|');
-  if (parts.length < 2) {
+  // Format: updatelist nama_produk@deskripsi_baru atau nama_produk|deskripsi_baru
+  let parts: string[];
+  if (ctx.fullArgs.includes('@')) {
+    parts = ctx.fullArgs.split('@');
+  } else if (ctx.fullArgs.includes('|')) {
+    parts = ctx.fullArgs.split('|');
+  } else {
     await reply(
-      '❌ Format salah.\nGunakan: *.updatelist nama_produk|deskripsi_baru*\n' +
-      'Contoh: *.updatelist YouTube Premium|YouTube Premium 2 Bulan - Rp90.000*'
+      '❌ Format salah.\nGunakan: *.updatelist nama_produk@deskripsi_baru* atau *.updatelist nama_produk|deskripsi_baru*\n' +
+      'Contoh:\n.updatelist yt@YouTube Premium 2 Bulan - Rp90.000'
     );
     return;
   }
 
   const name = parts[0].trim();
-  const newDescription = parts.slice(1).join('|').trim();
+  const newDescription = parts.slice(1).join(ctx.fullArgs.includes('@') ? '@' : '|');
 
   if (!name || !newDescription) {
     await reply('❌ Nama produk dan deskripsi tidak boleh kosong.');
