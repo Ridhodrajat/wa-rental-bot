@@ -43,8 +43,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
         for (const p of groupMetadata.participants) {
           // If sender matches participant's LID, add phone number to JIDs
           if (allSenderJids.includes(p.id)) {
-            if (p.phoneNumber) allSenderJids.push(p.phoneNumber);
             if (p.jid) allSenderJids.push(p.jid);
+            if (p.lid) allSenderJids.push(p.lid);
           }
         }
       }
