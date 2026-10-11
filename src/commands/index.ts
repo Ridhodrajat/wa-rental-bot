@@ -1,8 +1,8 @@
-import { CommandContext } from '../types';
+import { CommandContext, ReplyFn } from '../types';
 
 export type CommandHandler = (
   ctx: CommandContext,
-  reply: (text: string) => Promise<any>
+  reply: ReplyFn
 ) => Promise<void>;
 
 export interface CommandDefinition {
@@ -13,6 +13,7 @@ export interface CommandDefinition {
   groupOnly: boolean;
   description: string;
   category: 'owner' | 'product' | 'transaction' | 'welcome' | 'moderation' | 'settings' | 'utility';
+  hidden?: boolean; // Alias tersembunyi dari menu
 }
 
 import * as ownerCmd from './owner';
@@ -22,6 +23,7 @@ import * as welcomeCmd from './welcome';
 import * as modCmd from './moderation';
 import * as settingsCmd from './groupSettings';
 import * as utilCmd from './utility';
+import * as catalogCmd from './catalog';
 
 /**
  * Registry seluruh command.
@@ -35,14 +37,20 @@ function register(def: CommandDefinition): void {
 }
 
 // ============ Owner & Info ============
-register({ name: 'cekmenu', handler: async (ctx, reply) => { await reply(buildMenu(ctx)); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot', category: 'owner' });
+register({ name: 'menu', handler: async (ctx, reply) => { await reply(buildMenu(ctx)); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot', category: 'owner' });
+register({ name: 'cekmenu', handler: async (ctx, reply) => { await reply(buildMenu(ctx)); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot (alias)', category: 'owner', hidden: true });
 register({ name: 'owner', handler: ownerCmd.handleOwnerInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan kontak owner', category: 'owner' });
 register({ name: 'addsewa', handler: ownerCmd.handleAddSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Tambah/perpanjang sewa (owner)', category: 'owner' });
 register({ name: 'delsewa', handler: ownerCmd.handleDelSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Nonaktifkan sewa (owner)', category: 'owner' });
 register({ name: 'ceksewa', handler: ownerCmd.handleCekSewa, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek status sewa grup', category: 'owner' });
 register({ name: 'listsewa', handler: ownerCmd.handleListSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'List semua rental (owner)', category: 'owner' });
-register({ name: 'pay', handler: ownerCmd.handlePay, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Metode pembayaran', category: 'owner' });
-register({ name: 'setpay', handler: ownerCmd.handleSetPay, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Atur metode pembayaran (owner)', category: 'owner' });
+
+// ============ Anti Private Chat (Owner) ============
+register({ name: 'antiprivate', handler: ownerCmd.handleAntiPrivate, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Aktifkan/matikan anti private chat', category: 'owner' });
+register({ name: 'setprivatelimit', handler: ownerCmd.handleSetPrivateLimit, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Atur batas pesan private', category: 'owner' });
+register({ name: 'autoblock', handler: ownerCmd.handleAutoBlock, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Auto-block internal on/off', category: 'owner' });
+register({ name: 'cekantiprivate', handler: ownerCmd.handleCekAntiPrivate, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Lihat status anti private chat', category: 'owner' });
+register({ name: 'setowner', handler: ownerCmd.handleSetOwner, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Simpan nomor owner override', category: 'owner' });
 
 // ============ Product ============
 register({ name: 'list', handler: productCmd.handleList, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Lihat katalog produk', category: 'product' });
@@ -52,24 +60,33 @@ register({ name: 'renamelist', handler: productCmd.handleRenameList, ownerOnly: 
 register({ name: 'dellist', handler: productCmd.handleDelList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus produk', category: 'product' });
 
 // ============ Transaction ============
-register({ name: 'setproses', handler: txCmd.handleSetProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buat template proses', category: 'transaction' });
+register({ name: 'setproses', handler: txCmd.handleSetProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template proses', category: 'transaction' });
 register({ name: 'changeproses', handler: txCmd.handleChangeProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah template proses', category: 'transaction' });
-register({ name: 'delsetproses', handler: txCmd.handleDelSetProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus template proses', category: 'transaction' });
-register({ name: 'setdone', handler: txCmd.handleSetDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buat template selesai', category: 'transaction' });
+register({ name: 'delsetproses', handler: txCmd.handleDelSetProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template proses', category: 'transaction' });
+register({ name: 'setdone', handler: txCmd.handleSetDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template selesai', category: 'transaction' });
 register({ name: 'changedone', handler: txCmd.handleChangeDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah template selesai', category: 'transaction' });
-register({ name: 'delsetdone', handler: txCmd.handleDelSetDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus template selesai', category: 'transaction' });
-register({ name: 'proses', handler: txCmd.handleProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kirim template proses', category: 'transaction' });
-register({ name: 'done', handler: txCmd.handleDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kirim template selesai', category: 'transaction' });
+register({ name: 'delsetdone', handler: txCmd.handleDelSetDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template selesai', category: 'transaction' });
+register({ name: 'proses', handler: txCmd.handleProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kelola/kirim template proses', category: 'transaction' });
+register({ name: 'done', handler: txCmd.handleDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kelola/kirim template selesai', category: 'transaction' });
+register({ name: 'setopen', handler: txCmd.handleSetOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template pesan open', category: 'transaction' });
+register({ name: 'setclose', handler: txCmd.handleSetClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template pesan close', category: 'transaction' });
+
+// ============ Catalog Template ============
+register({ name: 'setlisttemplate', handler: catalogCmd.handleSetListTemplate, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template katalog', category: 'product' });
+register({ name: 'previewlist', handler: catalogCmd.handlePreviewList, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Preview katalog', category: 'product' });
+register({ name: 'setlistheader', handler: catalogCmd.handleSetListHeader, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur header katalog manual', category: 'product' });
+register({ name: 'setlistfooter', handler: catalogCmd.handleSetListFooter, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur footer katalog manual', category: 'product' });
+register({ name: 'resetlisttemplate', handler: catalogCmd.handleResetListTemplate, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template katalog', category: 'product' });
 
 // ============ Welcome / Goodbye ============
-register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Lihat template welcome', category: 'welcome' });
-register({ name: 'goodbye', handler: welcomeCmd.handleGoodbye, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Lihat template goodbye', category: 'welcome' });
-register({ name: 'setwelcome', handler: welcomeCmd.handleSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur template welcome', category: 'welcome' });
+register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Kelola welcome (on/off/preview)', category: 'welcome' });
+register({ name: 'goodbye', handler: welcomeCmd.handleGoodbye, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Kelola goodbye (on/off/preview)', category: 'welcome' });
+register({ name: 'setwelcome', handler: welcomeCmd.handleSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih/atur template welcome', category: 'welcome' });
 register({ name: 'changewelcome', handler: welcomeCmd.handleChangeWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah template welcome', category: 'welcome' });
-register({ name: 'delsetwelcome', handler: welcomeCmd.handleDelSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus template welcome', category: 'welcome' });
-register({ name: 'setleft', handler: welcomeCmd.handleSetLeft, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur template goodbye', category: 'welcome' });
+register({ name: 'delsetwelcome', handler: welcomeCmd.handleDelSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template welcome', category: 'welcome' });
+register({ name: 'setleft', handler: welcomeCmd.handleSetLeft, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih/atur template goodbye', category: 'welcome' });
 register({ name: 'changeleft', handler: welcomeCmd.handleChangeLeft, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah template goodbye', category: 'welcome' });
-register({ name: 'delsetleft', handler: welcomeCmd.handleDelSetLeft, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus template goodbye', category: 'welcome' });
+register({ name: 'delsetleft', handler: welcomeCmd.handleDelSetLeft, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template goodbye', category: 'welcome' });
 
 // ============ Moderation ============
 register({ name: 'antiwame', handler: modCmd.handleAntiwame, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Antiwame mode 1', category: 'moderation' });
@@ -96,11 +113,7 @@ register({ name: 'delsetbot', handler: settingsCmd.handleDelSetBot, ownerOnly: f
 
 // ============ Utility ============
 register({ name: 'afk', handler: utilCmd.handleAfk, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Aktifkan status AFK', category: 'utility' });
-register({ name: 'jeda', handler: utilCmd.handleJeda, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jeda operasi', category: 'utility' });
-register({ name: 'tambah', handler: utilCmd.handleTambah, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Kalkulator tambah', category: 'utility' });
-register({ name: 'kurang', handler: utilCmd.handleKurang, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Kalkulator kurang', category: 'utility' });
-register({ name: 'kali', handler: utilCmd.handleKali, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Kalkulator kali', category: 'utility' });
-register({ name: 'bagi', handler: utilCmd.handleBagi, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Kalkulator bagi', category: 'utility' });
+register({ name: 'ping', handler: utilCmd.handlePing, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek respons bot', category: 'utility' });
 register({ name: 'bot', handler: utilCmd.handleBotInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Info bot', category: 'utility' });
 
 export function getCommandNames(): Set<string> {
@@ -117,36 +130,58 @@ export function getCommand(name: string): CommandDefinition | undefined {
 export function buildMenu(ctx: CommandContext): string {
   const isOwnerUser = ctx.isOwner;
   const isAdminUser = ctx.isAdmin || ctx.isOwner;
+  const p = config_prefix();
 
-  const categories: Record<string, string[]> = {};
+  // Kelompokkan command berdasarkan kategori & akses
+  const groups: Record<string, string[]> = {
+    owner: [],
+    product: [],
+    transaction: [],
+    welcome: [],
+    moderation: [],
+    settings: [],
+    utility: [],
+  };
 
   for (const cmd of Object.values(commands)) {
+    if (cmd.hidden) continue;
+    // Sembunyikan command yang tidak bisa diakses pengguna
     if (cmd.ownerOnly && !isOwnerUser) continue;
     if (cmd.adminOnly && !isAdminUser) continue;
+    if (cmd.groupOnly && !ctx.isGroup && cmd.category !== 'owner') continue;
 
-    if (!categories[cmd.category]) categories[cmd.category] = [];
-    categories[cmd.category].push(`${config_prefix()}${cmd.name} - ${cmd.description}`);
+    groups[cmd.category]?.push(`${p}${cmd.name} — ${cmd.description}`);
   }
 
   const titleMap: Record<string, string> = {
-    owner: '👑 OWNER & INFO',
-    product: '📦 KATALOG PRODUK',
-    transaction: '🔄 TRANSAKSI',
-    welcome: '👋 WELCOME/GOODBYE',
-    moderation: '🛡️ MODERASI',
-    settings: '⚙️ PENGATURAN',
-    utility: '🔧 UTILITAS',
+    owner: '👑 Owner & Info',
+    product: '📦 Katalog Produk',
+    transaction: '🔄 Transaksi',
+    welcome: '👋 Welcome / Goodbye',
+    moderation: '🛡️ Moderasi Grup',
+    settings: '⚙️ Pengaturan Bot',
+    utility: '🔧 Utilitas',
   };
 
-  let text = `*📋 MENU BOT*\n`;
-  text += `Role: ${isOwnerUser ? 'Owner' : isAdminUser ? 'Admin Grup' : 'Anggota'}\n\n`;
+  const roleLabel = isOwnerUser ? 'Owner' : isAdminUser ? 'Admin Grup' : 'Anggota';
+  let text = `╭── ꒰ 🤖 ꒱ ──\n`;
+  text += `│ *MENU BOT*\n`;
+  text += `│ Role: *${roleLabel}*\n`;
+  text += `│ Prefix: \`${p}\`\n`;
+  text += `╰───────────────\n`;
 
-  for (const [cat, items] of Object.entries(categories)) {
-    text += `*${titleMap[cat] ?? cat.toUpperCase()}*\n`;
-    text += items.join('\n') + '\n\n';
+  for (const [cat, items] of Object.entries(groups)) {
+    if (!items || items.length === 0) continue;
+    text += `\n*${titleMap[cat] ?? cat.toUpperCase()}*\n`;
+    text += items.map((i) => `• ${i}`).join('\n') + '\n';
   }
 
-  return text.trim();
+  text += `\n╭── ꒰ 💡 ꒱ ──\n`;
+  text += `│ Ketik nama produk untuk melihat detail\n`;
+  text += `│ Ketik \`${p}list\` untuk melihat katalog\n`;
+  text += `╰───────────────`;
+
+  return text;
 }
 
 function config_prefix(): string {

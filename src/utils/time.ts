@@ -20,6 +20,102 @@ export function addDays(date: Date | string | number, days: number): Date {
   return d;
 }
 
+export function addMinutes(date: Date | string | number, minutes: number): Date {
+  const d = new Date(date);
+  d.setTime(d.getTime() + minutes * 60 * 1000);
+  return d;
+}
+
+export function addHours(date: Date | string | number, hours: number): Date {
+  const d = new Date(date);
+  d.setTime(d.getTime() + hours * 60 * 60 * 1000);
+  return d;
+}
+
+/**
+ * Parsing durasi sewa mendukung format:
+ * - `m` = menit
+ * - `j` = jam
+ * - `h` = hari
+ * - Angka polos dianggap hari (kompatibilitas lama, contoh: "30")
+ * Mengembalikan jumlah milidetik atau null jika tidak valid.
+ */
+export function parseDurationMs(input: string): number | null {
+  if (!input) return null;
+  const str = input.trim().toLowerCase();
+
+  // Angka polos = hari (kompatibilitas)
+  if (/^\d+$/.test(str)) {
+    const days = parseInt(str, 10);
+    if (days <= 0) return null;
+    return days * 24 * 60 * 60 * 1000;
+  }
+
+  const match = str.match(/^(\d+)(m|j|h|d|w)$/);
+  if (!match) return null;
+
+  const value = parseInt(match[1], 10);
+  if (value <= 0) return null;
+
+  const unit = match[2];
+  switch (unit) {
+    case 'm':
+      return value * 60 * 1000;
+    case 'j':
+      return value * 60 * 60 * 1000;
+    case 'h':
+      return value * 24 * 60 * 60 * 1000;
+    case 'd':
+      return value * 24 * 60 * 60 * 1000;
+    case 'w':
+      return value * 7 * 24 * 60 * 60 * 1000;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Tambahkan durasi milidetik ke sebuah waktu.
+ */
+export function addMs(date: Date | string | number, ms: number): Date {
+  const d = new Date(date);
+  d.setTime(d.getTime() + ms);
+  return d;
+}
+
+/**
+ * Format waktu WIB untuk tampilan singkat (tanggal & jam).
+ */
+export function formatWibDate(dateOrIso: Date | string | number = new Date()): string {
+  const date = new Date(dateOrIso);
+  if (isNaN(date.getTime())) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      timeZone: config.timezone,
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+  } catch {
+    return '-';
+  }
+}
+
+export function formatWibTime(dateOrIso: Date | string | number = new Date()): string {
+  const date = new Date(dateOrIso);
+  if (isNaN(date.getTime())) return '-';
+  try {
+    return new Intl.DateTimeFormat('id-ID', {
+      timeZone: config.timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date);
+  } catch {
+    return '-';
+  }
+}
+
 export function formatToTimezone(
   dateOrIso: Date | string | number,
   timeZone: string = config.timezone

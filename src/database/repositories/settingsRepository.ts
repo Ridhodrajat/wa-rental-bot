@@ -31,8 +31,8 @@ export class TransactionTemplateRepository {
     const db = getDatabase();
     const now = nowUtc();
     db.prepare(`
-      INSERT INTO transaction_templates (group_id, proses_template, done_template, created_at, updated_at)
-      VALUES (?, NULL, NULL, ?, ?)
+      INSERT INTO transaction_templates (group_id, proses_template, done_template, proses_enabled, done_enabled, open_template, close_template, created_at, updated_at)
+      VALUES (?, NULL, NULL, 1, 1, NULL, NULL, ?, ?)
     `).run(groupId, now, now);
     return this.get(groupId)!;
   }
@@ -50,6 +50,38 @@ export class TransactionTemplateRepository {
     const db = getDatabase();
     db.prepare(
       'UPDATE transaction_templates SET done_template = ?, updated_at = ? WHERE group_id = ?'
+    ).run(template, nowUtc(), groupId);
+  }
+
+  static setProsesEnabled(groupId: string, enabled: boolean): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE transaction_templates SET proses_enabled = ?, updated_at = ? WHERE group_id = ?'
+    ).run(enabled ? 1 : 0, nowUtc(), groupId);
+  }
+
+  static setDoneEnabled(groupId: string, enabled: boolean): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE transaction_templates SET done_enabled = ?, updated_at = ? WHERE group_id = ?'
+    ).run(enabled ? 1 : 0, nowUtc(), groupId);
+  }
+
+  static setOpen(groupId: string, template: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE transaction_templates SET open_template = ?, updated_at = ? WHERE group_id = ?'
+    ).run(template, nowUtc(), groupId);
+  }
+
+  static setClose(groupId: string, template: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE transaction_templates SET close_template = ?, updated_at = ? WHERE group_id = ?'
     ).run(template, nowUtc(), groupId);
   }
 }
@@ -171,8 +203,8 @@ export class GroupSettingsRepository {
     const db = getDatabase();
     const now = nowUtc();
     db.prepare(`
-      INSERT INTO group_settings (group_id, custom_data, jeda_ms, created_at, updated_at)
-      VALUES (?, NULL, 1500, ?, ?)
+      INSERT INTO group_settings (group_id, custom_data, jeda_ms, catalog_template_id, catalog_header, catalog_footer, created_at, updated_at)
+      VALUES (?, NULL, 1500, 1, NULL, NULL, ?, ?)
     `).run(groupId, now, now);
     return this.get(groupId)!;
   }
@@ -193,6 +225,30 @@ export class GroupSettingsRepository {
       nowUtc(),
       groupId
     );
+  }
+
+  static setCatalogTemplate(groupId: string, templateId: number): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE group_settings SET catalog_template_id = ?, updated_at = ? WHERE group_id = ?'
+    ).run(templateId, nowUtc(), groupId);
+  }
+
+  static setCatalogHeader(groupId: string, header: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE group_settings SET catalog_header = ?, updated_at = ? WHERE group_id = ?'
+    ).run(header, nowUtc(), groupId);
+  }
+
+  static setCatalogFooter(groupId: string, footer: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE group_settings SET catalog_footer = ?, updated_at = ? WHERE group_id = ?'
+    ).run(footer, nowUtc(), groupId);
   }
 }
 

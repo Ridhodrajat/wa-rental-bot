@@ -1,164 +1,252 @@
-import { CommandContext } from '../types';
+import { CommandContext, ReplyFn } from '../types';
 import { TransactionTemplateRepository } from '../database/repositories/settingsRepository';
+import { MESSAGE_TEMPLATES, getDefaultTemplate, getTemplateOption, TemplateFeature } from '../templates/messageTemplates';
+import { resolveTemplate, displayNameFromJid } from '../utils/placeholder';
 
 /**
- * Commands template transaksi (proses & selesai).
+ * Commands template transaksi (proses & done) dan pesan open/close.
+ *
+ * - .proses [on|off|preview|list|<teks>]
+ * - .done   [on|off|preview|list|<teks>]
+ * - .setproses <nomor|teks>, .changeproses, .delsetproses
+ * - .setdone <nomor|teks>, .changedone, .delsetdone
+ * - .setopen / .setclose / .setopentext / .setclosetext
  */
 
-export async function handleSetProses(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+async function requireAdmin(ctx: CommandContext, reply: ReplyFn): Promise<boolean> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
+    return false;
   }
   if (!ctx.isAdmin && !ctx.isOwner) {
     await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
+    return false;
+  }
+  return true;
+}
+
+function preview(template: string, ctx: CommandContext): string {
+  const { text } = resolveTemplate(template, {
+    user: displayNameFromJid(ctx.senderJid),
+    userJid: ctx.senderJid,
+    groupName: ctx.groupName ?? 'Grup',
+    product: ctx.args.join(' ') || undefined,
+  });
+  return text;
+}
+
+// ============ Proses ============
+
+export async function handleProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+
+  const arg = ctx.args[0]?.toLowerCase();
+
+  if (arg === 'on' || arg === 'off') {
+    if (!(await requireAdmin(ctx, reply))) return;
+    const enabled = arg === 'on';
+    TransactionTemplateRepository.setProsesEnabled(ctx.chatJid, enabled);
+    const current = TransactionTemplateRepository.get(ctx.chatJid)!;
+    if (!current.proses_template) {
+      TransactionTemplateRepository.setProses(ctx.chatJid, getDefaultTemplate('proses'));
+    }
+    await reply(`✅ Fitur *proses* ${enabled ? 'diaktifkan 🟢' : 'dimatikan 🔴'}.`);
     return;
   }
 
-  const template = ctx.fullArgs.trim();
-  if (!template) {
-    await reply('❌ Format: *.setproses <teks template>*\nContoh: *.setproses ⏳ Pesanan sedang diproses. Mohon tunggu.*');
+  if (arg === 'list') {
+    if (!(await requireAdmin(ctx, reply))) return;
+    let text = `🎨 *Pilihan Template Proses*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.proses) text += `*${t.id}.* ${t.label}\n`;
+    text += `\nGunakan: *.setproses <nomor>* atau *.setproses <teks>*`;
+    await reply(text);
     return;
   }
+
+  if (arg === 'preview') {
+    const current = TransactionTemplateRepository.get(ctx.chatJid);
+    const template = current?.proses_template ?? getDefaultTemplate('proses');
+    await reply(`🔍 *Preview Proses:*\n\n${preview(template, ctx)}`);
+    return;
+  }
+
+  const current = TransactionTemplateRepository.get(ctx.chatJid);
+  const status = current?.proses_enabled ? '🟢 ON' : '🔴 OFF';
+  const template = current?.proses_template ?? getDefaultTemplate('proses');
+  await reply(
+    `⏳ *Proses*\nStatus: ${status}\n\n*Template saat ini:*\n${template}\n\n` +
+    `Ubah dengan: *.setproses <nomor|teks>*`
+  );
+}
+
+export async function handleSetProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  const arg = ctx.fullArgs.trim();
+
+  if (!arg) {
+    let text = `🎨 *Pilihan Template Proses*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.proses) text += `*${t.id}.* ${t.label}\n`;
+    await reply(text + `\nGunakan: *.setproses <nomor>* atau *.setproses <teks>*`);
+    return;
+  }
+
+  if (/^\d+$/.test(arg)) {
+    const option = getTemplateOption('proses', parseInt(arg, 10));
+    if (!option) return reply(`❌ Nomor tidak valid (1-${MESSAGE_TEMPLATES.proses.length}).`);
+    TransactionTemplateRepository.setProses(ctx.chatJid, option.text);
+    TransactionTemplateRepository.setProsesEnabled(ctx.chatJid, true);
+    await reply(`✅ Template proses *${option.label}* dipilih.\n\n🔍 Preview:\n${preview(option.text, ctx)}`);
+    return;
+  }
+
+  TransactionTemplateRepository.setProses(ctx.chatJid, arg);
+  TransactionTemplateRepository.setProsesEnabled(ctx.chatJid, true);
+  await reply(`✅ Template proses kustom disimpan.\n\n🔍 Preview:\n${preview(arg, ctx)}`);
+}
+
+export async function handleChangeProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  const template = ctx.fullArgs.trim();
+  if (!template) return reply('❌ Format: *.changeproses <teks template baru>*');
+
+  const current = TransactionTemplateRepository.get(ctx.chatJid);
+  if (!current?.proses_template) return reply('ℹ️ Template proses belum diatur. Gunakan *.setproses*.');
 
   TransactionTemplateRepository.setProses(ctx.chatJid, template);
-  await reply('✅ Template *proses* berhasil disimpan.');
+  await reply(`✅ Template *proses* diubah.\n\n🔍 Preview:\n${preview(template, ctx)}`);
 }
 
-export async function handleChangeProses(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
+export async function handleDelSetProses(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  TransactionTemplateRepository.setProses(ctx.chatJid, getDefaultTemplate('proses'));
+  await reply('✅ Template *proses* direset ke default.');
+}
+
+// ============ Done ============
+
+export async function handleDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+
+  const arg = ctx.args[0]?.toLowerCase();
+
+  if (arg === 'on' || arg === 'off') {
+    if (!(await requireAdmin(ctx, reply))) return;
+    const enabled = arg === 'on';
+    TransactionTemplateRepository.setDoneEnabled(ctx.chatJid, enabled);
+    const current = TransactionTemplateRepository.get(ctx.chatJid)!;
+    if (!current.done_template) {
+      TransactionTemplateRepository.setDone(ctx.chatJid, getDefaultTemplate('done'));
+    }
+    await reply(`✅ Fitur *done* ${enabled ? 'diaktifkan 🟢' : 'dimatikan 🔴'}.`);
     return;
   }
 
-  const template = ctx.fullArgs.trim();
-  if (!template) {
-    await reply('❌ Format: *.changeproses <teks template baru>*');
+  if (arg === 'list') {
+    if (!(await requireAdmin(ctx, reply))) return;
+    let text = `🎨 *Pilihan Template Done*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.done) text += `*${t.id}.* ${t.label}\n`;
+    text += `\nGunakan: *.setdone <nomor>* atau *.setdone <teks>*`;
+    await reply(text);
+    return;
+  }
+
+  if (arg === 'preview') {
+    const current = TransactionTemplateRepository.get(ctx.chatJid);
+    const template = current?.done_template ?? getDefaultTemplate('done');
+    await reply(`🔍 *Preview Done:*\n\n${preview(template, ctx)}`);
     return;
   }
 
   const current = TransactionTemplateRepository.get(ctx.chatJid);
-  if (!current?.proses_template) {
-    await reply('ℹ️ Template proses belum diatur. Gunakan *.setproses* terlebih dahulu.');
-    return;
-  }
-
-  TransactionTemplateRepository.setProses(ctx.chatJid, template);
-  await reply('✅ Template *proses* berhasil diubah.');
+  const status = current?.done_enabled ? '🟢 ON' : '🔴 OFF';
+  const template = current?.done_template ?? getDefaultTemplate('done');
+  await reply(
+    `✅ *Done*\nStatus: ${status}\n\n*Template saat ini:*\n${template}\n\n` +
+    `Ubah dengan: *.setdone <nomor|teks>*`
+  );
 }
 
-export async function handleDelSetProses(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
+export async function handleSetDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  const arg = ctx.fullArgs.trim();
+
+  if (!arg) {
+    let text = `🎨 *Pilihan Template Done*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.done) text += `*${t.id}.* ${t.label}\n`;
+    await reply(text + `\nGunakan: *.setdone <nomor>* atau *.setdone <teks>*`);
     return;
   }
 
-  TransactionTemplateRepository.setProses(ctx.chatJid, null);
-  await reply('✅ Template *proses* berhasil dihapus.');
+  if (/^\d+$/.test(arg)) {
+    const option = getTemplateOption('done', parseInt(arg, 10));
+    if (!option) return reply(`❌ Nomor tidak valid (1-${MESSAGE_TEMPLATES.done.length}).`);
+    TransactionTemplateRepository.setDone(ctx.chatJid, option.text);
+    TransactionTemplateRepository.setDoneEnabled(ctx.chatJid, true);
+    await reply(`✅ Template done *${option.label}* dipilih.\n\n🔍 Preview:\n${preview(option.text, ctx)}`);
+    return;
+  }
+
+  TransactionTemplateRepository.setDone(ctx.chatJid, arg);
+  TransactionTemplateRepository.setDoneEnabled(ctx.chatJid, true);
+  await reply(`✅ Template done kustom disimpan.\n\n🔍 Preview:\n${preview(arg, ctx)}`);
 }
 
-export async function handleSetDone(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
-
+export async function handleChangeDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
   const template = ctx.fullArgs.trim();
-  if (!template) {
-    await reply('❌ Format: *.setdone <teks template>*\nContoh: *.setdone ✅ Pesanan selesai diproses. Terima kasih.*');
-    return;
-  }
+  if (!template) return reply('❌ Format: *.changedone <teks template baru>*');
+
+  const current = TransactionTemplateRepository.get(ctx.chatJid);
+  if (!current?.done_template) return reply('ℹ️ Template done belum diatur. Gunakan *.setdone*.');
 
   TransactionTemplateRepository.setDone(ctx.chatJid, template);
-  await reply('✅ Template *selesai* berhasil disimpan.');
+  await reply(`✅ Template *done* diubah.\n\n🔍 Preview:\n${preview(template, ctx)}`);
 }
 
-export async function handleChangeDone(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
-
-  const template = ctx.fullArgs.trim();
-  if (!template) {
-    await reply('❌ Format: *.changedone <teks template baru>*');
-    return;
-  }
-
-  const current = TransactionTemplateRepository.get(ctx.chatJid);
-  if (!current?.done_template) {
-    await reply('ℹ️ Template selesai belum diatur. Gunakan *.setdone* terlebih dahulu.');
-    return;
-  }
-
-  TransactionTemplateRepository.setDone(ctx.chatJid, template);
-  await reply('✅ Template *selesai* berhasil diubah.');
+export async function handleDelSetDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  TransactionTemplateRepository.setDone(ctx.chatJid, getDefaultTemplate('done'));
+  await reply('✅ Template *done* direset ke default.');
 }
 
-export async function handleDelSetDone(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
+// ============ Open / Close template settings ============
 
-  TransactionTemplateRepository.setDone(ctx.chatJid, null);
-  await reply('✅ Template *selesai* berhasil dihapus.');
+export async function handleSetOpen(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  const arg = ctx.fullArgs.trim();
+  if (!arg) {
+    let text = `🎨 *Pilihan Template Open*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.open) text += `*${t.id}.* ${t.label}\n`;
+    await reply(text + `\nGunakan: *.setopen <nomor>* atau *.setopen <teks>*`);
+    return;
+  }
+  if (/^\d+$/.test(arg)) {
+    const option = getTemplateOption('open', parseInt(arg, 10));
+    if (!option) return reply(`❌ Nomor tidak valid (1-${MESSAGE_TEMPLATES.open.length}).`);
+    TransactionTemplateRepository.setOpen(ctx.chatJid, option.text);
+    await reply(`✅ Template open *${option.label}* dipilih.`);
+    return;
+  }
+  TransactionTemplateRepository.setOpen(ctx.chatJid, arg);
+  await reply('✅ Template open kustom disimpan.');
 }
 
-export async function handleProses(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
+export async function handleSetClose(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+  const arg = ctx.fullArgs.trim();
+  if (!arg) {
+    let text = `🎨 *Pilihan Template Close*\n\n`;
+    for (const t of MESSAGE_TEMPLATES.close) text += `*${t.id}.* ${t.label}\n`;
+    await reply(text + `\nGunakan: *.setclose <nomor>* atau *.setclose <teks>*`);
     return;
   }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
+  if (/^\d+$/.test(arg)) {
+    const option = getTemplateOption('close', parseInt(arg, 10));
+    if (!option) return reply(`❌ Nomor tidak valid (1-${MESSAGE_TEMPLATES.close.length}).`);
+    TransactionTemplateRepository.setClose(ctx.chatJid, option.text);
+    await reply(`✅ Template close *${option.label}* dipilih.`);
     return;
   }
-
-  const current = TransactionTemplateRepository.get(ctx.chatJid);
-  if (!current?.proses_template) {
-    await reply('ℹ️ Template proses belum diatur. Gunakan *.setproses* terlebih dahulu.');
-    return;
-  }
-
-  await reply(current.proses_template);
-}
-
-export async function handleDone(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
-
-  const current = TransactionTemplateRepository.get(ctx.chatJid);
-  if (!current?.done_template) {
-    await reply('ℹ️ Template selesai belum diatur. Gunakan *.setdone* terlebih dahulu.');
-    return;
-  }
-
-  await reply(current.done_template);
+  TransactionTemplateRepository.setClose(ctx.chatJid, arg);
+  await reply('✅ Template close kustom disimpan.');
 }

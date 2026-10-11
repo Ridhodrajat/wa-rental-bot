@@ -20,6 +20,18 @@ async function main(): Promise<void> {
   const db = initDatabase();
   runMigrations(db);
 
+  // Muat override nomor owner dari database (jika ada)
+  try {
+    const { GlobalConfigRepository } = await import('./database/repositories/globalConfigRepository');
+    const override = GlobalConfigRepository.get('owner_number_override');
+    if (override && /^[0-9]{8,}$/.test(override)) {
+      config.ownerNumber = override;
+      logger.info({ ownerNumber: override }, 'Nomor owner override dimuat dari database');
+    }
+  } catch (error) {
+    logger.warn({ error }, 'Gagal memuat override owner, memakai .env');
+  }
+
   // Jalankan scheduler pemeriksaan rental & backup (housekeeping)
   // Dilakukan setiap 1 jam secara periodik
   const schedulerIntervalMs = 60 * 60 * 1000;

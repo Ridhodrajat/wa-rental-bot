@@ -1,12 +1,13 @@
-import type { WASocket, proto } from '@whiskeysockets/baileys';
-import { CommandContext } from '../types';
+import type { WASocket } from '@whiskeysockets/baileys';
+import { CommandContext, ReplyFn, ReplyOptions } from '../types';
 import { parseCommand, isJidGroup, extractJidNumber } from '../utils/parser';
 import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata } from '../utils/permissions';
 import { getGroupMetadata } from '../connection/whatsapp';
-import { getCommandNames, getCommand, buildMenu } from '../commands/index';
+import { getCommandNames, getCommand } from '../commands/index';
 import { RentalService } from '../services/rentalService';
-import { ProductRepository } from '../database/repositories/productRepository';
+import { replyProduct } from '../commands/product';
 import { GroupRepository } from '../database/repositories/groupRepository';
+import { handlePrivateMessage } from './privateChatHandler';
 import { config } from '../config/env';
 import logger from '../utils/logger';
 
@@ -18,30 +19,50 @@ import logger from '../utils/logger';
 export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<void> {
   const key = msg.key;
   const chatJid = key.remoteJid!;
+  if (!chatJid) return;
+
+  // Abaikan status broadcast & pesan sistem
+  if (chatJid === 'status@broadcast') return;
+
   const senderJid = key.participant || key.remoteJid!;
   const isGroup = isJidGroup(chatJid);
-  const body = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
 
+  const body =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    msg.message?.videoMessage?.caption ||
+    '';
+
+  // ============ PRIVATE CHAT (DM) ============
+  // Tangani anti-private-chat sebelum apapun untuk pesan DM non-owner
+  if (!isGroup) {
+    const handled = await handlePrivateMessage(sock, msg);
+    if (handled) return;
+  }
+
+  // Abaikan pesan tanpa teks & bukan command (kecuali DM sudah ditangani)
   if (!body || body.length > config.maxMessageLength) return;
 
   const senderNumber = extractJidNumber(senderJid);
-  
+
   // Kumpulkan semua JID alternatif untuk handle WhatsApp LID
   const allSenderJids = collectSenderJids(msg);
-  
+
   // Ambil metadata grup jika di grup
   let groupMetadata: any = null;
-  
+  let groupName = 'Grup';
+
   if (isGroup) {
     groupMetadata = await getGroupMetadata(chatJid);
     if (groupMetadata) {
+      groupName = groupMetadata.subject || 'Grup';
       // Daftarkan grup ke database agar FK rentals valid
-      GroupRepository.upsertGroup(chatJid, groupMetadata.subject || 'Unknown Group');
-      
+      GroupRepository.upsertGroup(chatJid, groupName);
+
       // Resolve LID → phone number via group participants
       if (groupMetadata.participants) {
         for (const p of groupMetadata.participants) {
-          // If sender matches participant's LID, add phone number to JIDs
           if (allSenderJids.includes(p.id)) {
             if (p.jid) allSenderJids.push(p.jid);
             if (p.lid) allSenderJids.push(p.lid);
@@ -50,20 +71,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       }
     }
   }
-  
+
   const isOwnerUser = isOwnerFromJids(allSenderJids, msg);
-  
-  // Debug log untuk development
-  if (config.nodeEnv === 'development') {
-    logger.debug({
-      chatJid,
-      senderJid,
-      allSenderJids,
-      isOwnerUser,
-      ownerNumber: config.ownerNumber,
-      fullKey: JSON.stringify(key, null, 2)
-    }, 'Message context');
-  }
 
   let isAdminUser = false;
   let isBotAdminUser = false;
@@ -74,10 +83,26 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     isBotAdminUser = isBotAdminFromMetadata(botJids, groupMetadata);
   }
 
-  // Fungsi reply aman
-  const reply = async (text: string): Promise<any> => {
+  // Fungsi reply aman (mendukung teks, mention, dan gambar)
+  const reply: ReplyFn = async (text: string, options?: ReplyOptions): Promise<any> => {
     try {
-      await sock.sendMessage(chatJid, { text }, { quoted: msg });
+      if (options?.imagePath) {
+        await sock.sendMessage(
+          chatJid,
+          {
+            image: { url: options.imagePath },
+            caption: options.caption ?? text,
+            mentions: options.mentions,
+          },
+          { quoted: msg }
+        );
+      } else {
+        await sock.sendMessage(
+          chatJid,
+          { text, mentions: options?.mentions },
+          { quoted: msg }
+        );
+      }
     } catch (error) {
       logger.error({ error, chatJid }, 'Gagal mengirim reply');
     }
@@ -108,8 +133,13 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       return;
     }
 
-    // Cek rental aktif (kecuali owner commands dan info)
-    if (!['owner', 'pay', 'ceksewa', 'listsewa', 'bot', 'addsewa', 'delsewa', 'setpay', 'cekmenu'].includes(parsed.commandName)) {
+    // Command yang dikecualikan dari cek rental aktif
+    const exemptCommands = [
+      'menu', 'cekmenu', 'owner', 'ping', 'bot', 'ceksewa', 'listsewa',
+      'addsewa', 'delsewa', 'antiprivate', 'setprivatelimit', 'autoblock',
+      'cekantiprivate', 'setowner',
+    ];
+    if (!exemptCommands.includes(parsed.commandName)) {
       if (isGroup && !RentalService.isRentalActive(chatJid)) {
         await reply('❌ Grup ini belum terdaftar atau masa sewa sudah berakhir.');
         return;
@@ -132,13 +162,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       mentionedJids: msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [],
       quotedMsg: msg.message?.extendedTextMessage?.contextInfo?.quotedMessage,
       msg,
+      groupName,
     };
-
-    // Handle cekmenu khusus
-    if (parsed.commandName === 'cekmenu') {
-      await reply(buildMenu(ctx));
-      return;
-    }
 
     // Dispatch ke command handler
     try {
@@ -148,13 +173,25 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       await reply('❌ Terjadi kesalahan saat memproses perintah.');
     }
   } else {
-    // Bukan command: coba cari produk
-    // Jangan reply untuk pesan biasa
+    // Bukan command: coba cari produk (hanya di grup dengan rental aktif)
     if (isGroup && RentalService.isRentalActive(chatJid)) {
-      const product = ProductRepository.findByName(chatJid, body);
-      if (product) {
-        await reply(product.description);
-      }
+      const ctx: CommandContext = {
+        chatJid,
+        senderJid,
+        senderNumber,
+        isGroup,
+        isOwner: isOwnerUser,
+        isAdmin: isAdminUser,
+        isBotAdmin: isBotAdminUser,
+        body,
+        commandName: '',
+        args: [],
+        fullArgs: '',
+        mentionedJids: [],
+        msg,
+        groupName,
+      };
+      await replyProduct(ctx, reply);
     }
   }
 }

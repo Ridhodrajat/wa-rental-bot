@@ -37,14 +37,19 @@ export interface ProductRecord {
   name: string; // Normalized (lowercase) untuk matching
   original_name: string; // Case asli saat diinput
   description: string;
+  image_path: string | null; // Path lokasi file foto lokal
   created_at: string;
   updated_at: string;
 }
 
 export interface TransactionTemplateRecord {
   group_id: string;
+  proses_enabled: number; // 0 or 1
   proses_template: string | null;
+  done_enabled: number; // 0 or 1
   done_template: string | null;
+  open_template: string | null;
+  close_template: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,9 +75,25 @@ export interface ModerationSettingsRecord {
 export interface GroupSettingsRecord {
   group_id: string;
   custom_data: string | null; // JSON string untuk setbot / updatesetbot
-  jeda_ms: number; // Jeda default operasi (ms)
+  catalog_template_id: number; // ID template catalog (1..5)
+  catalog_header: string | null; // Header manual
+  catalog_footer: string | null; // Footer manual
   created_at: string;
   updated_at: string;
+}
+
+export interface AntiPrivateSettingsRecord {
+  enabled: number; // 0 or 1
+  message_limit: number; // Max bubble chat before block/ignore
+  auto_block: number; // 0 or 1
+}
+
+export interface PrivateChatCounterRecord {
+  user_jid: string;
+  message_count: number;
+  warned: number; // 0 or 1
+  blocked: number; // 0 or 1
+  last_message_at: string;
 }
 
 export interface PaymentConfigRecord {
@@ -91,6 +112,17 @@ export interface UserAfkRecord {
 
 export type Role = 'OWNER' | 'GROUP_ADMIN' | 'GROUP_MEMBER' | 'UNAUTHORIZED';
 
+/**
+ * Fungsi balasan yang mendukung teks + mention + media.
+ */
+export interface ReplyOptions {
+  mentions?: string[];
+  imagePath?: string | null;
+  caption?: string;
+}
+
+export type ReplyFn = (text: string, options?: ReplyOptions) => Promise<any>;
+
 export interface CommandContext {
   chatJid: string;
   senderJid: string;
@@ -106,4 +138,5 @@ export interface CommandContext {
   mentionedJids: string[];
   quotedMsg?: any;
   msg: any;
+  groupName?: string;
 }

@@ -27,15 +27,15 @@ export class ProductRepository {
     );
   }
 
-  static create(groupId: string, originalName: string, description: string): ProductRecord {
+  static create(groupId: string, originalName: string, description: string, imagePath: string | null = null): ProductRecord {
     const db = getDatabase();
     const normalized = this.normalizeName(originalName);
     const now = nowUtc();
 
     db.prepare(`
-      INSERT INTO products (group_id, name, original_name, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(groupId, normalized, originalName, description, now, now);
+      INSERT INTO products (group_id, name, original_name, description, image_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(groupId, normalized, originalName, description, imagePath, now, now);
 
     return this.findByName(groupId, normalized)!;
   }
@@ -44,27 +44,44 @@ export class ProductRepository {
     groupId: string,
     oldName: string,
     newOriginalName: string,
-    newDescription: string
+    newDescription: string,
+    newImagePath?: string | null
   ): void {
     const db = getDatabase();
     const oldNormalized = this.normalizeName(oldName);
     const newNormalized = this.normalizeName(newOriginalName);
 
-    db.prepare(`
-      UPDATE products
-      SET name = ?, original_name = ?, description = ?, updated_at = ?
-      WHERE group_id = ? AND name = ?
-    `).run(newNormalized, newOriginalName, newDescription, nowUtc(), groupId, oldNormalized);
+    if (newImagePath !== undefined) {
+      db.prepare(`
+        UPDATE products
+        SET name = ?, original_name = ?, description = ?, image_path = ?, updated_at = ?
+        WHERE group_id = ? AND name = ?
+      `).run(newNormalized, newOriginalName, newDescription, newImagePath, nowUtc(), groupId, oldNormalized);
+    } else {
+      db.prepare(`
+        UPDATE products
+        SET name = ?, original_name = ?, description = ?, updated_at = ?
+        WHERE group_id = ? AND name = ?
+      `).run(newNormalized, newOriginalName, newDescription, nowUtc(), groupId, oldNormalized);
+    }
   }
 
-  static updateDescription(groupId: string, name: string, description: string): void {
+  static updateDescription(groupId: string, name: string, description: string, imagePath?: string | null): void {
     const db = getDatabase();
     const normalized = this.normalizeName(name);
-    db.prepare(`
-      UPDATE products
-      SET description = ?, updated_at = ?
-      WHERE group_id = ? AND name = ?
-    `).run(description, nowUtc(), groupId, normalized);
+    if (imagePath !== undefined) {
+      db.prepare(`
+        UPDATE products
+        SET description = ?, image_path = ?, updated_at = ?
+        WHERE group_id = ? AND name = ?
+      `).run(description, imagePath, nowUtc(), groupId, normalized);
+    } else {
+      db.prepare(`
+        UPDATE products
+        SET description = ?, updated_at = ?
+        WHERE group_id = ? AND name = ?
+      `).run(description, nowUtc(), groupId, normalized);
+    }
   }
 
   static delete(groupId: string, name: string): void {

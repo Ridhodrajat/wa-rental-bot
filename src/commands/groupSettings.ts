@@ -1,4 +1,4 @@
-import { CommandContext } from '../types';
+import { CommandContext, ReplyFn } from '../types';
 import { GroupSettingsRepository } from '../database/repositories/settingsRepository';
 import { getSocket } from '../connection/whatsapp';
 
@@ -6,7 +6,7 @@ import { getSocket } from '../connection/whatsapp';
  * Commands pengaturan grup (setppgc, setnamegc, setdesgc, setbot, updatesetbot, delsetbot).
  */
 
-export async function handleSetPpgc(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleSetPpgc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup.');
@@ -15,7 +15,7 @@ export async function handleSetPpgc(ctx: CommandContext, reply: (text: string) =
   reply('ℹ️ Untuk mengubah foto profil grup, reply gambar dengan teks *.setppgc*');
 }
 
-export async function handleSetNamegc(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleSetNamegc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup.');
@@ -32,7 +32,7 @@ export async function handleSetNamegc(ctx: CommandContext, reply: (text: string)
   }
 }
 
-export async function handleSetDesgc(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleSetDesgc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup.');
@@ -49,7 +49,7 @@ export async function handleSetDesgc(ctx: CommandContext, reply: (text: string) 
   }
 }
 
-export async function handleSetBot(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleSetBot(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
@@ -60,7 +60,7 @@ export async function handleSetBot(ctx: CommandContext, reply: (text: string) =>
   await reply('✅ Pengaturan khusus bot untuk grup ini berhasil disimpan.');
 }
 
-export async function handleUpdateSetBot(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleUpdateSetBot(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
@@ -71,7 +71,7 @@ export async function handleUpdateSetBot(ctx: CommandContext, reply: (text: stri
   await reply('✅ Pengaturan bot berhasil diperbarui.');
 }
 
-export async function handleDelSetBot(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleDelSetBot(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 

@@ -1,7 +1,7 @@
 import { RentalRepository } from '../database/repositories/rentalRepository';
 import { GroupRepository } from '../database/repositories/groupRepository';
 import { RentalRecord, RentalStatus } from '../types';
-import { addDays, nowUtc, formatToTimezone } from '../utils/time';
+import { addMs, nowUtc, formatToTimezone } from '../utils/time';
 import { config } from '../config/env';
 import logger from '../utils/logger';
 
@@ -13,10 +13,11 @@ import logger from '../utils/logger';
 export class RentalService {
   /**
    * Buat rental baru atau perpanjang yang sudah ada.
+   * @param durationMs durasi tambahan dalam milidetik.
    */
   static createOrExtend(
     groupId: string,
-    daysToAdd: number,
+    durationMs: number,
     createdBy: string
   ): { rental: RentalRecord; action: 'CREATE' | 'EXTEND' | 'RESTORE' } {
     const existing = RentalRepository.getByGroupId(groupId);
@@ -26,21 +27,21 @@ export class RentalService {
     let action: 'CREATE' | 'EXTEND' | 'RESTORE' = 'CREATE';
 
     if (existing && existing.status === 'ACTIVE') {
-      // Perpanjang dari expiry yang ada
-      newExpiresAt = addDays(existing.expires_at, daysToAdd);
+      // Perpanjang dari expiry yang ada (tidak menghapus sisa durasi)
+      newExpiresAt = addMs(existing.expires_at, durationMs);
       previousExpiresAt = existing.expires_at;
       action = 'EXTEND';
     } else if (existing && existing.status === 'EXPIRED_GRACE') {
       // Dalam grace period, restore dan hitung dari sekarang
-      newExpiresAt = addDays(now, daysToAdd);
+      newExpiresAt = addMs(now, durationMs);
       previousExpiresAt = existing.expires_at;
       action = 'RESTORE';
     } else {
       // Rental baru
-      newExpiresAt = addDays(now, daysToAdd);
+      newExpiresAt = addMs(now, durationMs);
     }
 
-    const graceUntil = addDays(newExpiresAt, config.gracePeriodDays);
+    const graceUntil = addMs(newExpiresAt, config.gracePeriodDays * 24 * 60 * 60 * 1000);
 
     if (existing) {
       RentalRepository.update({
@@ -61,11 +62,11 @@ export class RentalService {
     RentalRepository.logHistory({
       group_id: groupId,
       action: action as 'CREATE' | 'EXTEND' | 'RESTORE',
-      days_added: daysToAdd,
+      days_added: Math.round(durationMs / (24 * 60 * 60 * 1000)),
       previous_expires_at: previousExpiresAt,
       new_expires_at: newExpiresAt.toISOString(),
       performed_by: createdBy,
-      note: `${daysToAdd} hari ditambahkan`,
+      note: `Durasi ditambahkan: ${Math.round(durationMs / 60000)} menit`,
     });
 
     return {
