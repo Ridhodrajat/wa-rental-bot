@@ -38,10 +38,11 @@ export function parseCommand(
     }
   }
 
-  const parts = raw.split(/\s+/);
-  const commandName = parts[0]?.toLowerCase() ?? '';
-  const args = parts.slice(1);
-  const fullArgs = parts.slice(1).join(' ').trim();
+  // Split only first word for command, preserve rest with newlines
+  const spaceIdx = raw.indexOf(' ');
+  const commandName = (spaceIdx === -1 ? raw : raw.slice(0, spaceIdx)).toLowerCase();
+  const fullArgs = spaceIdx === -1 ? '' : raw.slice(spaceIdx + 1);
+  const args = fullArgs.split(/\s+/);
 
   return {
     isCommand: true,
