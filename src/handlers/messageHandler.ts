@@ -1,7 +1,7 @@
 import type { WASocket, proto } from '@whiskeysockets/baileys';
 import { CommandContext } from '../types';
 import { parseCommand, isJidGroup, extractJidNumber } from '../utils/parser';
-import { isOwner, isGroupAdmin, isBotGroupAdmin } from '../utils/permissions';
+import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata } from '../utils/permissions';
 import { getGroupMetadata } from '../connection/whatsapp';
 import { getCommandNames, getCommand, buildMenu } from '../commands/index';
 import { RentalService } from '../services/rentalService';
@@ -25,21 +25,53 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
   if (!body || body.length > config.maxMessageLength) return;
 
   const senderNumber = extractJidNumber(senderJid);
-  const isOwnerUser = isOwner(senderJid);
-
+  
+  // Kumpulkan semua JID alternatif untuk handle WhatsApp LID
+  const allSenderJids = collectSenderJids(msg);
+  
   // Ambil metadata grup jika di grup
   let groupMetadata: any = null;
-  let isAdminUser = false;
-  let isBotAdminUser = false;
-
+  
   if (isGroup) {
     groupMetadata = await getGroupMetadata(chatJid);
     if (groupMetadata) {
-      isAdminUser = isGroupAdmin(senderJid, groupMetadata);
-      isBotAdminUser = isBotGroupAdmin(sock.user!.id, groupMetadata);
       // Daftarkan grup ke database agar FK rentals valid
       GroupRepository.upsertGroup(chatJid, groupMetadata.subject || 'Unknown Group');
+      
+      // Resolve LID → phone number via group participants
+      if (groupMetadata.participants) {
+        for (const p of groupMetadata.participants) {
+          // If sender matches participant's LID, add phone number to JIDs
+          if (allSenderJids.includes(p.id)) {
+            if (p.phoneNumber) allSenderJids.push(p.phoneNumber);
+            if (p.jid) allSenderJids.push(p.jid);
+          }
+        }
+      }
     }
+  }
+  
+  const isOwnerUser = isOwnerFromJids(allSenderJids, msg);
+  
+  // Debug log untuk development
+  if (config.nodeEnv === 'development') {
+    logger.debug({
+      chatJid,
+      senderJid,
+      allSenderJids,
+      isOwnerUser,
+      ownerNumber: config.ownerNumber,
+      fullKey: JSON.stringify(key, null, 2)
+    }, 'Message context');
+  }
+
+  let isAdminUser = false;
+  let isBotAdminUser = false;
+
+  if (isGroup && groupMetadata) {
+    isAdminUser = isAdminFromJids(allSenderJids, groupMetadata);
+    const botJids = [sock.user!.id];
+    isBotAdminUser = isBotAdminFromMetadata(botJids, groupMetadata);
   }
 
   // Fungsi reply aman
