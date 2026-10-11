@@ -54,24 +54,26 @@ export function renderCatalog(params: {
   const templateId = params.templateId ?? config.templateId;
   const template: CatalogTemplate = getCatalogTemplate(templateId);
 
-  const requesterName = params.requesterName || displayNameFromJid(params.requesterJid);
+  // Nomor tampilan untuk mention: bagian sebelum '@' dan ':'
+  const requesterNumber = displayNameFromJid(params.requesterJid);
 
   // Header: manual jika ada, jika tidak pakai template
   const headerRaw = params.customHeader ?? config.header ?? template.header;
   const footerRaw = params.customFooter ?? config.footer ?? template.footer;
 
-  // Pre-replace placeholder khusus katalog
+  // Placeholder @namawaorangyangmengetiklist -> mention sungguhan (@nomor).
+  // Teks harus memuat "@<nomor>" dan JID dimasukkan ke daftar mentions agar ter-tag.
   const prep = (raw: string): string =>
-    raw.replace(/@namawaorangyangmengetiklist/g, requesterName);
+    raw.replace(/@namawaorangyangmengetiklist/g, `@${requesterNumber}`);
 
   const headerResolved = resolveTemplate(prep(headerRaw), {
-    user: requesterName,
+    user: requesterNumber,
     userJid: params.requesterJid,
     groupName: params.groupName,
   });
 
   const footerResolved = resolveTemplate(prep(footerRaw), {
-    user: requesterName,
+    user: requesterNumber,
     userJid: params.requesterJid,
     groupName: params.groupName,
   });
@@ -90,8 +92,10 @@ export function renderCatalog(params: {
     .filter((s) => s && s.trim().length > 0)
     .join('\n');
 
-  // Gabungkan mention (hindari duplikat)
-  const mentions = Array.from(new Set([...headerResolved.mentions, ...footerResolved.mentions]));
+  // Kumpulkan mention: pengguna yang mengetik .list + mention lain dari resolver
+  const mentions = Array.from(
+    new Set([params.requesterJid, ...headerResolved.mentions, ...footerResolved.mentions])
+  );
 
   return { text, mentions };
 }

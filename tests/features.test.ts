@@ -182,6 +182,23 @@ describe('Fitur Baru WA Rental Bot', () => {
         expect(t.productPrefix.length).toBeGreaterThan(0);
       }
     });
+
+    test('Requester di-tag (mention) via @namawaorangyangmengetiklist', () => {
+      GroupRepository.upsertGroup('cat@g.us', 'Cat Group');
+      ProductRepository.create('cat@g.us', 'youtube', 'YouTube Premium');
+      const { renderCatalog } = require('../src/utils/catalogRenderer');
+      const r = renderCatalog({
+        groupId: 'cat@g.us',
+        groupName: 'Cat Group',
+        requesterJid: '6289510214771@s.whatsapp.net',
+        products: ProductRepository.getByGroupId('cat@g.us'),
+      });
+      // Teks harus memuat @<nomor>
+      expect(r.text).toContain('@6289510214771');
+      expect(r.text).not.toContain('@namawaorangyangmengetiklist');
+      // JID requester harus ada di daftar mentions agar ter-tag
+      expect(r.mentions).toContain('6289510214771@s.whatsapp.net');
+    });
   });
 
   describe('Anti private chat', () => {
