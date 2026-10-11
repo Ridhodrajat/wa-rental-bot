@@ -1,11 +1,52 @@
-import { CommandContext } from '../types';
+import { CommandContext, ReplyFn } from '../types';
 import { ProductRepository } from '../database/repositories/productRepository';
+import { GroupRepository } from '../database/repositories/groupRepository';
+import { saveProductImage, deleteMediaFile, resolveMediaPath } from '../services/mediaService';
+import { renderCatalog } from '../utils/catalogRenderer';
+import { getGroupMetadata, getSocket } from '../connection/whatsapp';
+import logger from '../utils/logger';
 
 /**
  * Commands pengelolaan katalog produk (admin grup).
+ * Mendukung nama, deskripsi, dan foto opsional.
  */
 
-export async function handleList(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+// ============ Helper ============
+
+/**
+ * Parse input produk: mendukung separator `@` dan `|`.
+ * Mengembalikan { name, description } atau null jika format salah.
+ */
+function parseProductInput(fullArgs: string): { name: string; description: string } | null {
+  let sep: string | null = null;
+  if (fullArgs.includes('|')) sep = '|';
+  else if (fullArgs.includes('@')) sep = '@';
+
+  if (!sep) return null;
+
+  const idx = fullArgs.indexOf(sep);
+  const name = fullArgs.slice(0, idx).trim();
+  const description = fullArgs.slice(idx + 1).trim();
+
+  if (!name || !description) return null;
+  return { name, description };
+}
+
+async function requireAdmin(ctx: CommandContext, reply: ReplyFn): Promise<boolean> {
+  if (!ctx.isGroup) {
+    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
+    return false;
+  }
+  if (!ctx.isAdmin && !ctx.isOwner) {
+    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
+    return false;
+  }
+  return true;
+}
+
+// ============ List katalog ============
+
+export async function handleList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
     return;
@@ -13,52 +54,43 @@ export async function handleList(ctx: CommandContext, reply: (text: string) => P
 
   const products = ProductRepository.getByGroupId(ctx.chatJid);
 
-  if (products.length === 0) {
-    await reply('ℹ️ Belum ada produk di katalog grup ini.');
-    return;
+  // Nama grup
+  let groupName = ctx.groupName ?? '';
+  if (!groupName) {
+    try {
+      const meta = await getGroupMetadata(ctx.chatJid);
+      groupName = meta?.subject ?? 'Grup';
+    } catch {
+      groupName = 'Grup';
+    }
   }
 
-  let text = `📦 *Katalog Produk (${products.length})*\n\n`;
-  for (let i = 0; i < products.length; i++) {
-    const p = products[i];
-    text += `${i + 1}. ${p.original_name}\n`;
-  }
+  const { text, mentions } = renderCatalog({
+    groupId: ctx.chatJid,
+    groupName,
+    requesterJid: ctx.senderJid,
+    products,
+  });
 
-  await reply(text.trim());
+  await reply(text, { mentions });
 }
 
-export async function handleAddList(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
+// ============ Tambah produk ============
 
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
+export async function handleAddList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
 
-  // Format: addlist nama_produk@deskripsi atau nama_produk|deskripsi
-  let parts: string[];
-  if (ctx.fullArgs.includes('@')) {
-    parts = ctx.fullArgs.split('@');
-  } else if (ctx.fullArgs.includes('|')) {
-    parts = ctx.fullArgs.split('|');
-  } else {
+  const parsed = parseProductInput(ctx.fullArgs);
+  if (!parsed) {
     await reply(
-      '❌ Format salah.\nGunakan: *.addlist nama_produk@deskripsi* atau *.addlist nama_produk|deskripsi*\n' +
-      'Contoh:\n.addlist yt@YouTube Premium 1 Bulan - Rp50.000'
+      '❌ Format salah.\nGunakan: *.addlist nama_produk|deskripsi*\n' +
+      'Atau kirim foto dengan caption: *.addlist nama_produk|deskripsi*\n' +
+      'Contoh: *.addlist youtube|YouTube Premium 1 Bulan - Rp50.000*'
     );
     return;
   }
 
-  const name = parts[0].trim();
-  const description = parts.slice(1).join(ctx.fullArgs.includes('@') ? '@' : '|');
-
-  if (!name || !description) {
-    await reply('❌ Nama produk dan deskripsi tidak boleh kosong.');
-    return;
-  }
+  const { name, description } = parsed;
 
   const existing = ProductRepository.findByName(ctx.chatJid, name);
   if (existing) {
@@ -66,41 +98,55 @@ export async function handleAddList(ctx: CommandContext, reply: (text: string) =
     return;
   }
 
-  ProductRepository.create(ctx.chatJid, name, description);
-  await reply(`✅ Produk *${name}* berhasil ditambahkan ke katalog.`);
+  // Cek apakah ada foto (dari pesan atau quoted)
+  let imagePath: string | null = null;
+  const hasImage =
+    ctx.msg?.message?.imageMessage ||
+    ctx.msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+
+  if (hasImage) {
+    const saved = await saveProductImage(ctx.msg, ctx.chatJid, name, getSocket());
+    if (!saved) {
+      await reply(
+        '⚠️ Foto gagal diproses (tipe/ukuran tidak valid). Produk akan disimpan tanpa foto.\n' +
+        'Gunakan .updatelist untuk mencoba menambahkan foto lagi.'
+      );
+    } else {
+      imagePath = saved.relativePath;
+    }
+  }
+
+  ProductRepository.create(ctx.chatJid, name, description, imagePath);
+
+  const photoInfo = imagePath ? '\n📷 Dengan foto' : '';
+  await reply(`✅ Produk *${name}* berhasil ditambahkan ke katalog.${photoInfo}`);
 }
 
-export async function handleUpdateList(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
+// ============ Update produk (deskripsi dan/atau foto) ============
 
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
+export async function handleUpdateList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
 
-  // Format: updatelist nama_produk@deskripsi_baru atau nama_produk|deskripsi_baru
-  let parts: string[];
-  if (ctx.fullArgs.includes('@')) {
-    parts = ctx.fullArgs.split('@');
-  } else if (ctx.fullArgs.includes('|')) {
-    parts = ctx.fullArgs.split('|');
+  // Format: updatelist nama_produk|deskripsi_baru  (deskripsi opsional jika hanya ganti foto)
+  const parsed = parseProductInput(ctx.fullArgs);
+
+  // Jika tidak ada deskripsi, mungkin hanya mengganti foto: .updatelist nama_produk
+  let name: string;
+  let newDescription: string | null = null;
+
+  if (parsed) {
+    name = parsed.name;
+    newDescription = parsed.description;
   } else {
-    await reply(
-      '❌ Format salah.\nGunakan: *.updatelist nama_produk@deskripsi_baru* atau *.updatelist nama_produk|deskripsi_baru*\n' +
-      'Contoh:\n.updatelist yt@YouTube Premium 2 Bulan - Rp90.000'
-    );
-    return;
-  }
-
-  const name = parts[0].trim();
-  const newDescription = parts.slice(1).join(ctx.fullArgs.includes('@') ? '@' : '|');
-
-  if (!name || !newDescription) {
-    await reply('❌ Nama produk dan deskripsi tidak boleh kosong.');
-    return;
+    // Hanya nama produk (untuk update foto saja)
+    name = ctx.fullArgs.trim();
+    if (!name) {
+      await reply(
+        '❌ Format salah.\nGunakan: *.updatelist nama_produk|deskripsi_baru*\n' +
+        'Atau balas foto dengan *.updatelist nama_produk* untuk mengganti foto.'
+      );
+      return;
+    }
   }
 
   const existing = ProductRepository.findByName(ctx.chatJid, name);
@@ -109,24 +155,44 @@ export async function handleUpdateList(ctx: CommandContext, reply: (text: string
     return;
   }
 
-  ProductRepository.updateDescription(ctx.chatJid, name, newDescription);
-  await reply(`✅ Deskripsi produk *${name}* berhasil diperbarui.`);
+  // Cek foto pengganti
+  let newImagePath: string | null | undefined = undefined;
+  const hasImage =
+    ctx.msg?.message?.imageMessage ||
+    ctx.msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+
+  if (hasImage) {
+    const saved = await saveProductImage(ctx.msg, ctx.chatJid, name, getSocket());
+    if (!saved) {
+      await reply('❌ Foto gagal diproses. Data produk lama tidak diubah.');
+      return; // Jangan ubah apapun jika foto gagal (konsistensi data)
+    }
+    newImagePath = saved.relativePath;
+  }
+
+  const finalDescription = newDescription ?? existing.description;
+
+  // Update DB dulu
+  ProductRepository.updateDescription(ctx.chatJid, name, finalDescription, newImagePath);
+
+  // Hapus foto lama SETELAH update berhasil (jika ada foto pengganti)
+  if (newImagePath !== undefined && existing.image_path && existing.image_path !== newImagePath) {
+    deleteMediaFile(existing.image_path);
+  }
+
+  const parts: string[] = [];
+  if (newDescription) parts.push('deskripsi');
+  if (newImagePath !== undefined) parts.push('foto');
+  await reply(`✅ Produk *${name}* berhasil diperbarui (${parts.join(' & ') || 'tidak ada perubahan'}).`);
 }
 
-export async function handleRenameList(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
+// ============ Rename produk ============
 
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
+export async function handleRenameList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
 
-  // Format: renamelist nama_lama|nama_baru
-  const parts = ctx.fullArgs.split('|');
-  if (parts.length < 2) {
+  const parsed = parseProductInput(ctx.fullArgs);
+  if (!parsed) {
     await reply(
       '❌ Format salah.\nGunakan: *.renamelist nama_lama|nama_baru*\n' +
       'Contoh: *.renamelist youtube|yt premium*'
@@ -134,13 +200,8 @@ export async function handleRenameList(ctx: CommandContext, reply: (text: string
     return;
   }
 
-  const oldName = parts[0].trim();
-  const newName = parts[1].trim();
-
-  if (!oldName || !newName) {
-    await reply('❌ Nama lama dan nama baru tidak boleh kosong.');
-    return;
-  }
+  const oldName = parsed.name;
+  const newName = parsed.description; // setelah separator
 
   const existing = ProductRepository.findByName(ctx.chatJid, oldName);
   if (!existing) {
@@ -154,20 +215,20 @@ export async function handleRenameList(ctx: CommandContext, reply: (text: string
     return;
   }
 
-  ProductRepository.update(ctx.chatJid, oldName, newName, existing.description);
+  ProductRepository.update(
+    ctx.chatJid,
+    oldName,
+    newName,
+    existing.description,
+    existing.image_path
+  );
   await reply(`✅ Produk *${oldName}* berhasil diubah namanya menjadi *${newName}*.`);
 }
 
-export async function handleDelList(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
-  if (!ctx.isGroup) {
-    await reply('❌ Perintah ini hanya bisa digunakan di grup.');
-    return;
-  }
+// ============ Hapus produk ============
 
-  if (!ctx.isAdmin && !ctx.isOwner) {
-    await reply('❌ Perintah ini hanya dapat dijalankan oleh admin grup atau owner bot.');
-    return;
-  }
+export async function handleDelList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
 
   const name = ctx.fullArgs.trim();
   if (!name) {
@@ -182,5 +243,31 @@ export async function handleDelList(ctx: CommandContext, reply: (text: string) =
   }
 
   ProductRepository.delete(ctx.chatJid, name);
+  // Hapus file media setelah data terhapus
+  deleteMediaFile(existing.image_path);
   await reply(`✅ Produk *${name}* berhasil dihapus dari katalog.`);
+}
+
+// ============ Tampilkan produk (dipanggil dari messageHandler) ============
+
+/**
+ * Kirim produk (foto + deskripsi) ke grup.
+ * Mengembalikan true jika produk ditemukan & terkirim.
+ */
+export async function replyProduct(
+  ctx: CommandContext,
+  reply: ReplyFn
+): Promise<boolean> {
+  const product = ProductRepository.findByName(ctx.chatJid, ctx.body.trim());
+  if (!product) return false;
+
+  const imageAbs = resolveMediaPath(product.image_path);
+  const caption = `${product.original_name}\n\n${product.description}`;
+
+  if (imageAbs) {
+    await reply(caption, { imagePath: imageAbs });
+  } else {
+    await reply(caption);
+  }
+  return true;
 }

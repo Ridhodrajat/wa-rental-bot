@@ -30,23 +30,35 @@ function normalizeNumber(raw: string): string {
 }
 
 const ownerNumber = normalizeNumber(required('OWNER_NUMBER'));
+const ownerName = (process.env.OWNER_NAME ?? 'Owner').trim() || 'Owner';
 const botPrefix = (process.env.BOT_PREFIX ?? '.').trim() || '.';
 const databasePath = path.resolve(
   process.cwd(),
   process.env.DATABASE_PATH ?? './data/bot.sqlite'
 );
 const authDir = path.resolve(process.cwd(), process.env.AUTH_DIR ?? './auth');
+const mediaDir = path.resolve(process.cwd(), process.env.MEDIA_DIR ?? './media');
 const logLevel = (process.env.LOG_LEVEL ?? 'info').trim();
 const nodeEnv = (process.env.NODE_ENV ?? 'development').trim();
 
-// Zona waktu operasional (untuk tampilan). Default Asia/Makassar (WITA).
-const timezone = (process.env.TZ_DISPLAY ?? 'Asia/Makassar').trim();
+// Zona waktu operasional (untuk tampilan). Default Asia/Jakarta (WIB).
+const timezone = (process.env.TZ_DISPLAY ?? 'Asia/Jakarta').trim();
+
+// Konfigurasi anti-private-chat
+const privateMessageLimit = parseInt(process.env.PRIVATE_MESSAGE_LIMIT ?? '5', 10);
+const autoBlockEnabled = (process.env.AUTO_BLOCK_ENABLED ?? 'false').toLowerCase() === 'true';
+const antiprivateEnabled = (process.env.ANTIPRIVATE_ENABLED ?? 'true').toLowerCase() === 'true';
+
+// Batas ukuran media yang diizinkan (5 MB)
+const maxMediaSizeBytes = parseInt(process.env.MAX_MEDIA_SIZE ?? String(5 * 1024 * 1024), 10);
 
 export const config = {
   ownerNumber,
+  ownerName,
   botPrefix,
   databasePath,
   authDir,
+  mediaDir,
   logLevel,
   nodeEnv,
   timezone,
@@ -58,12 +70,18 @@ export const config = {
   // Nama bot
   botName: 'WA Rental Bot',
   version: '1.0.0',
+  // Anti private chat
+  privateMessageLimit: isNaN(privateMessageLimit) ? 5 : privateMessageLimit,
+  autoBlockEnabled,
+  antiprivateEnabled,
+  maxMediaSizeBytes,
 };
 
 export function ensureRuntimeDirs(): void {
   const dirs = [
     path.dirname(config.databasePath),
     config.authDir,
+    config.mediaDir,
     path.resolve(process.cwd(), 'backups'),
     path.resolve(process.cwd(), 'data'),
   ];

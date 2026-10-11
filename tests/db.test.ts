@@ -58,13 +58,15 @@ describe('Database Integration Tests', () => {
     const groupId = 'test@g.us';
     GroupRepository.upsertGroup(groupId, 'Lifecycle Group');
 
-    // Add sewa 30 hari
-    const res = RentalService.createOrExtend(groupId, 30, '628123456789');
+    const DAY = 24 * 60 * 60 * 1000;
+
+    // Add sewa 30 hari (dalam ms)
+    const res = RentalService.createOrExtend(groupId, 30 * DAY, '628123456789');
     expect(res.action).toBe('CREATE');
     expect(res.rental.status).toBe('ACTIVE');
 
     // Perpanjang 10 hari lagi
-    const res2 = RentalService.createOrExtend(groupId, 10, '628123456789');
+    const res2 = RentalService.createOrExtend(groupId, 10 * DAY, '628123456789');
     expect(res2.action).toBe('EXTEND');
 
     // Simulasi expiry

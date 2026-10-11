@@ -1,12 +1,14 @@
-import { CommandContext } from '../types';
-import { ModerationRepository } from '../database/repositories/settingsRepository';
+import { CommandContext, ReplyFn } from '../types';
+import { ModerationRepository, TransactionTemplateRepository } from '../database/repositories/settingsRepository';
 import { getSocket, getGroupMetadata } from '../connection/whatsapp';
+import { getDefaultTemplate } from '../templates/messageTemplates';
+import { resolveTemplate } from '../utils/placeholder';
 
 /**
  * Commands moderasi grup (antiwame, antilink, open, close, hidetag, add, kick, promote, demote, linkgc, resetlinkgc).
  */
 
-export async function handleAntiwame(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleAntiwame(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
     return;
@@ -21,7 +23,7 @@ export async function handleAntiwame(ctx: CommandContext, reply: (text: string) 
   await reply('✅ Antiwame (Mode 1 - Peringatan & Hapus Pesan) telah diaktifkan.');
 }
 
-export async function handleAntiwame2(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleAntiwame2(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
     return;
@@ -36,7 +38,7 @@ export async function handleAntiwame2(ctx: CommandContext, reply: (text: string)
   await reply('✅ Antiwame (Mode 2 - Kick Langsung) telah diaktifkan.');
 }
 
-export async function handleAntilink(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleAntilink(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
     return;
@@ -51,7 +53,7 @@ export async function handleAntilink(ctx: CommandContext, reply: (text: string) 
   await reply('✅ Antilink (Mode 1 - Peringatan & Hapus Pesan) telah diaktifkan.');
 }
 
-export async function handleAntilink2(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleAntilink2(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) {
     await reply('❌ Perintah ini hanya bisa digunakan di grup.');
     return;
@@ -66,7 +68,7 @@ export async function handleAntilink2(ctx: CommandContext, reply: (text: string)
   await reply('✅ Antilink (Mode 2 - Kick Langsung) telah diaktifkan.');
 }
 
-export async function handleOpen(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleOpen(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -74,13 +76,22 @@ export async function handleOpen(ctx: CommandContext, reply: (text: string) => P
   const sock = getSocket();
   try {
     await sock.groupSettingUpdate(ctx.chatJid, 'not_announcement');
-    await reply('✅ Grup berhasil dibuka. Semua anggota dapat mengirim pesan.');
+
+    // Kirim pesan template open
+    const tx = TransactionTemplateRepository.get(ctx.chatJid);
+    const template = tx?.open_template ?? getDefaultTemplate('open');
+    const { text, mentions } = resolveTemplate(template, {
+      user: ctx.senderNumber,
+      userJid: ctx.senderJid,
+      groupName: ctx.groupName ?? 'Grup',
+    });
+    await sock.sendMessage(ctx.chatJid, { text, mentions });
   } catch (error) {
     await reply('❌ Gagal membuka grup. Pastikan bot adalah admin.');
   }
 }
 
-export async function handleClose(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleClose(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -88,13 +99,22 @@ export async function handleClose(ctx: CommandContext, reply: (text: string) => 
   const sock = getSocket();
   try {
     await sock.groupSettingUpdate(ctx.chatJid, 'announcement');
-    await reply('✅ Grup berhasil ditutup. Hanya admin yang dapat mengirim pesan.');
+
+    // Kirim pesan template close
+    const tx = TransactionTemplateRepository.get(ctx.chatJid);
+    const template = tx?.close_template ?? getDefaultTemplate('close');
+    const { text, mentions } = resolveTemplate(template, {
+      user: ctx.senderNumber,
+      userJid: ctx.senderJid,
+      groupName: ctx.groupName ?? 'Grup',
+    });
+    await sock.sendMessage(ctx.chatJid, { text, mentions });
   } catch (error) {
     await reply('❌ Gagal menutup grup. Pastikan bot adalah admin.');
   }
 }
 
-export async function handleHidetag(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleHidetag(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
@@ -111,7 +131,7 @@ export async function handleHidetag(ctx: CommandContext, reply: (text: string) =
   });
 }
 
-export async function handleKick(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleKick(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -130,7 +150,7 @@ export async function handleKick(ctx: CommandContext, reply: (text: string) => P
   }
 }
 
-export async function handleAdd(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleAdd(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -150,7 +170,7 @@ export async function handleAdd(ctx: CommandContext, reply: (text: string) => Pr
   }
 }
 
-export async function handlePromote(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handlePromote(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -167,7 +187,7 @@ export async function handlePromote(ctx: CommandContext, reply: (text: string) =
   }
 }
 
-export async function handleDemote(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleDemote(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -184,7 +204,7 @@ export async function handleDemote(ctx: CommandContext, reply: (text: string) =>
   }
 }
 
-export async function handleLinkGc(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleLinkGc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
@@ -198,7 +218,7 @@ export async function handleLinkGc(ctx: CommandContext, reply: (text: string) =>
   }
 }
 
-export async function handleResetLinkGc(ctx: CommandContext, reply: (text: string) => Promise<any>): Promise<void> {
+export async function handleResetLinkGc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');

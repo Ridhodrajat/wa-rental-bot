@@ -134,6 +134,94 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    id: 2,
+    name: 'add_media_templates_antiprivate',
+    up: (db) => {
+      // 1. Tambah kolom image_path ke products (jika belum ada)
+      const productCols = db
+        .prepare('PRAGMA table_info(products)')
+        .all() as { name: string }[];
+      if (!productCols.some((c) => c.name === 'image_path')) {
+        db.exec(`ALTER TABLE products ADD COLUMN image_path TEXT`);
+      }
+
+      // 2. Tambah kolom template transaksi baru
+      const txCols = db
+        .prepare('PRAGMA table_info(transaction_templates)')
+        .all() as { name: string }[];
+      if (!txCols.some((c) => c.name === 'proses_enabled')) {
+        db.exec(
+          `ALTER TABLE transaction_templates ADD COLUMN proses_enabled INTEGER NOT NULL DEFAULT 1`
+        );
+      }
+      if (!txCols.some((c) => c.name === 'done_enabled')) {
+        db.exec(
+          `ALTER TABLE transaction_templates ADD COLUMN done_enabled INTEGER NOT NULL DEFAULT 1`
+        );
+      }
+      if (!txCols.some((c) => c.name === 'open_template')) {
+        db.exec(`ALTER TABLE transaction_templates ADD COLUMN open_template TEXT`);
+      }
+      if (!txCols.some((c) => c.name === 'close_template')) {
+        db.exec(`ALTER TABLE transaction_templates ADD COLUMN close_template TEXT`);
+      }
+
+      // 3. Tambah kolom catalog template ke group_settings
+      const gsCols = db
+        .prepare('PRAGMA table_info(group_settings)')
+        .all() as { name: string }[];
+      if (!gsCols.some((c) => c.name === 'catalog_template_id')) {
+        db.exec(
+          `ALTER TABLE group_settings ADD COLUMN catalog_template_id INTEGER NOT NULL DEFAULT 1`
+        );
+      }
+      if (!gsCols.some((c) => c.name === 'catalog_header')) {
+        db.exec(`ALTER TABLE group_settings ADD COLUMN catalog_header TEXT`);
+      }
+      if (!gsCols.some((c) => c.name === 'catalog_footer')) {
+        db.exec(`ALTER TABLE group_settings ADD COLUMN catalog_footer TEXT`);
+      }
+
+      // 4. Tabel konfigurasi anti-private-chat (global)
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS anti_private_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          enabled INTEGER NOT NULL DEFAULT 1,
+          message_limit INTEGER NOT NULL DEFAULT 5,
+          auto_block INTEGER NOT NULL DEFAULT 0,
+          updated_at TEXT NOT NULL
+        );
+      `);
+
+      // 5. Tabel counter private message per pengguna
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS private_chat_counters (
+          user_jid TEXT PRIMARY KEY,
+          message_count INTEGER NOT NULL DEFAULT 0,
+          warned INTEGER NOT NULL DEFAULT 0,
+          blocked INTEGER NOT NULL DEFAULT 0,
+          last_message_at TEXT NOT NULL
+        );
+      `);
+
+      // 6. Tabel konfigurasi global owner (key-value)
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS global_config (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+
+      // Nilai default anti-private
+      const now = new Date().toISOString();
+      db.prepare(
+        `INSERT OR IGNORE INTO anti_private_settings (id, enabled, message_limit, auto_block, updated_at)
+         VALUES (1, 1, 5, 0, ?)`
+      ).run(now);
+    },
+  },
 ];
 
 export function runMigrations(db: DatabaseSync): void {

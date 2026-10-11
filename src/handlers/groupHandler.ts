@@ -2,6 +2,8 @@ import type { WASocket, GroupParticipant } from '@whiskeysockets/baileys';
 import { WelcomeGoodbyeRepository } from '../database/repositories/settingsRepository';
 import { RentalService } from '../services/rentalService';
 import { GroupRepository } from '../database/repositories/groupRepository';
+import { getDefaultTemplate } from '../templates/messageTemplates';
+import { resolveTemplate, displayNameFromJid } from '../utils/placeholder';
 import logger from '../utils/logger';
 
 /**
@@ -20,32 +22,45 @@ export async function handleGroupParticipantsUpdate(
 
   const config = WelcomeGoodbyeRepository.get(groupId);
 
+  // Ambil nama grup
+  let groupName = 'Grup';
+  try {
+    const meta = await sock.groupMetadata(groupId);
+    groupName = meta?.subject ?? 'Grup';
+  } catch {
+    // abaikan
+  }
+
   if (action === 'add') {
-    if (!config || !config.welcome_enabled || !config.welcome_template) return;
+    const template = config?.welcome_template ?? getDefaultTemplate('welcome');
+    if (!config || !config.welcome_enabled) return;
 
     for (const participant of participants) {
-      const number = participant.split('@')[0];
-      const message = config.welcome_template
-        .replace(/@user/g, `@${number}`)
-        .replace(/@group/g, 'Grup');
+      const { text, mentions } = resolveTemplate(template, {
+        user: displayNameFromJid(participant),
+        userJid: participant,
+        groupName,
+      });
 
       await sock.sendMessage(groupId, {
-        text: message,
-        mentions: [participant],
+        text,
+        mentions,
       });
     }
   } else if (action === 'remove') {
-    if (!config || !config.goodbye_enabled || !config.goodbye_template) return;
+    const template = config?.goodbye_template ?? getDefaultTemplate('goodbye');
+    if (!config || !config.goodbye_enabled) return;
 
     for (const participant of participants) {
-      const number = participant.split('@')[0];
-      const message = config.goodbye_template
-        .replace(/@user/g, `@${number}`)
-        .replace(/@group/g, 'Grup');
+      const { text, mentions } = resolveTemplate(template, {
+        user: displayNameFromJid(participant),
+        userJid: participant,
+        groupName,
+      });
 
       await sock.sendMessage(groupId, {
-        text: message,
-        mentions: [participant],
+        text,
+        mentions,
       });
     }
   }
