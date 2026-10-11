@@ -44,6 +44,7 @@ export function renderCatalog(params: {
   groupId: string;
   groupName: string;
   requesterJid: string;
+  requesterName?: string;
   products: ProductRecord[];
   templateId?: number;
   customHeader?: string | null;
@@ -53,19 +54,23 @@ export function renderCatalog(params: {
   const templateId = params.templateId ?? config.templateId;
   const template: CatalogTemplate = getCatalogTemplate(templateId);
 
-  const requesterName = displayNameFromJid(params.requesterJid);
+  const requesterName = params.requesterName || displayNameFromJid(params.requesterJid);
 
   // Header: manual jika ada, jika tidak pakai template
   const headerRaw = params.customHeader ?? config.header ?? template.header;
   const footerRaw = params.customFooter ?? config.footer ?? template.footer;
 
-  const headerResolved = resolveTemplate(headerRaw, {
+  // Pre-replace placeholder khusus katalog
+  const prep = (raw: string): string =>
+    raw.replace(/@namawaorangyangmengetiklist/g, requesterName);
+
+  const headerResolved = resolveTemplate(prep(headerRaw), {
     user: requesterName,
     userJid: params.requesterJid,
     groupName: params.groupName,
   });
 
-  const footerResolved = resolveTemplate(footerRaw, {
+  const footerResolved = resolveTemplate(prep(footerRaw), {
     user: requesterName,
     userJid: params.requesterJid,
     groupName: params.groupName,
