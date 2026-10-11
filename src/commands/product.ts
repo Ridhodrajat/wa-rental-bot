@@ -65,10 +65,14 @@ export async function handleList(ctx: CommandContext, reply: ReplyFn): Promise<v
     }
   }
 
+  // Nama pemanggil (utamakan pushName jika tersedia)
+  const requesterName = ctx.msg?.pushName?.trim() || undefined;
+
   const { text, mentions } = renderCatalog({
     groupId: ctx.chatJid,
     groupName,
     requesterJid: ctx.senderJid,
+    requesterName,
     products,
   });
 
