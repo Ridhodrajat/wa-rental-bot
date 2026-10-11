@@ -4,5 +4,6 @@ auth/
 data/*.sqlite*
 backups/
 media/
+logs/
 .env
 *.log

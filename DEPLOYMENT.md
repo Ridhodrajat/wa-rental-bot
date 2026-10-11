@@ -28,15 +28,27 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git build-essential
 ```
 
-### 2. Install Node.js 22+
+### 2. Install Node.js (versi yang tepat!)
+
+> ⚠️ **Penting:** Proyek ini memakai modul **`node:sqlite` bawaan Node.js**
+> (bukan `better-sqlite3`), jadi versi Node harus tepat.
+
+- **Node.js 22.5+** — modul `node:sqlite` sudah ada, tetapi masih butuh flag
+  `--experimental-sqlite` (proyek menyediakan script `npm run start:sqlite`).
+- **Node.js 24 LTS** — **direkomendasikan**, modul `node:sqlite` sudah stabil
+  tanpa flag.
 
 ```bash
-# Install Node.js 22 LTS (mendukung node:sqlite built-in)
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+# Opsi A (direkomendasikan): Node.js 24 LTS
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
+# Opsi B: Node.js 22 LTS (butuh flag --experimental-sqlite)
+# curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+# sudo apt install -y nodejs
+
 # Verifikasi instalasi
-node -v  # harus >= v22.0.0
+node -v   # harus >= v22.5.0
 npm -v
 ```
 
@@ -69,13 +81,19 @@ nano .env
 
 **Edit `.env`:**
 ```env
-OWNER_NUMBER=628123456789    # Ganti dengan nomor owner Anda
+OWNER_NUMBER=628123456789    # Ganti dengan nomor owner Anda (format 62...)
+OWNER_NAME=NamaOwner
 BOT_PREFIX=.
 DATABASE_PATH=./data/bot.sqlite
 AUTH_DIR=./auth
+MEDIA_DIR=./media
 LOG_LEVEL=info
 NODE_ENV=production
-TZ_DISPLAY=Asia/Makassar
+TZ_DISPLAY=Asia/Jakarta
+ANTIPRIVATE_ENABLED=true
+PRIVATE_MESSAGE_LIMIT=5
+AUTO_BLOCK_ENABLED=false
+MAX_MEDIA_SIZE=5242880
 ```
 
 ### 5. Build Project
@@ -97,17 +115,34 @@ pm2 startup
 
 ### 7. Jalankan Bot dengan PM2
 
-```bash
-# Start bot
-pm2 start dist/index.js --name wa-rental-bot --time
+Cara termudah — pakai file `ecosystem.config.js` yang sudah tersedia di repo:
 
-# Save PM2 configuration
+```bash
+# Buat folder log
+mkdir -p logs
+
+# Start bot via ecosystem (instances=1, autorestart, memory limit)
+pm2 start ecosystem.config.js
+
+# Simpan konfigurasi agar auto-start saat VPS reboot
 pm2 save
 
 # Lihat status
 pm2 status
 pm2 logs wa-rental-bot --lines 50
 ```
+
+> Jika pakai **Node.js 22** (bukan 24), tambahkan flag `--experimental-sqlite`.
+> Ubah baris `script` di `ecosystem.config.js` menjadi:
+> ```javascript
+> script: './dist/index.js',
+> node_args: '--experimental-sqlite',
+> ```
+> atau start manual:
+> ```bash
+> pm2 start dist/index.js --name wa-rental-bot --node-args="--experimental-sqlite"
+> pm2 save
+> ```
 
 ### 8. Pairing WhatsApp
 
@@ -126,36 +161,38 @@ pm2 logs wa-rental-bot --lines 100
 
 ## 🔧 Konfigurasi PM2 Lanjutan
 
-### Ecosystem File (Optional)
+### File `ecosystem.config.js`
 
-Buat `ecosystem.config.js`:
+Repo sudah menyertakan `ecosystem.config.js` dengan konfigurasi berikut:
 
 ```javascript
 module.exports = {
   apps: [{
     name: 'wa-rental-bot',
     script: './dist/index.js',
+    cwd: __dirname,
     instances: 1,
     exec_mode: 'fork',
     autorestart: true,
     watch: false,
     max_memory_restart: '500M',
-    env: {
-      NODE_ENV: 'production'
-    },
+    restart_delay: 5000,
+    max_restarts: 50,
+    min_uptime: '20s',
+    env: { NODE_ENV: 'production' },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
+    time: true,
   }]
 };
 ```
 
-Start dengan ecosystem:
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-```
+> ⚠️ **Jangan ubah `instances` menjadi lebih dari 1.** Satu sesi WhatsApp hanya
+> boleh dijalankan oleh satu proses. Menjalankan dua instance dengan folder
+> `auth/` yang sama menyebabkan konflik stream (kode 440), `Bad MAC`, dan
+> sesi logout.
 
 ## 🔒 Keamanan
 
