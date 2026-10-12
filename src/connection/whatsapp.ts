@@ -125,18 +125,62 @@ export function getBotJid(): string | null {
 }
 
 /**
- * Ambil metadata grup dengan error handling.
+ * Cache metadata grup agar tidak membanjiri WhatsApp dengan query metadata.
+ * TTL default 60 detik. Cukup untuk menangani burst pesan di grup.
+ */
+const groupMetadataCache = new Map<
+  string,
+  { metadata: GroupMetadata; expiresAt: number }
+>();
+const GROUP_METADATA_TTL_MS = 60_000;
+const MAX_CACHE_ENTRIES = 500;
+
+function cleanupGroupMetadataCache(): void {
+  if (groupMetadataCache.size <= MAX_CACHE_ENTRIES) return;
+  const now = Date.now();
+  for (const [key, entry] of groupMetadataCache.entries()) {
+    if (entry.expiresAt < now) {
+      groupMetadataCache.delete(key);
+    }
+  }
+}
+
+/**
+ * Ambil metadata grup dengan error handling dan cache.
  */
 export async function getGroupMetadata(
   jid: string
 ): Promise<GroupMetadata | null> {
   if (!sock) return null;
+
+  const cached = groupMetadataCache.get(jid);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.metadata;
+  }
+
   try {
-    return await sock.groupMetadata(jid);
+    const metadata = await Promise.race([
+      sock.groupMetadata(jid),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timed Out')), 8_000)
+      ),
+    ]);
+    groupMetadataCache.set(jid, {
+      metadata,
+      expiresAt: Date.now() + GROUP_METADATA_TTL_MS,
+    });
+    cleanupGroupMetadataCache();
+    return metadata;
   } catch (error) {
-    logger.error({ error, jid }, 'Gagal mengambil metadata grup');
+    logger.warn({ error, jid }, 'Gagal mengambil metadata grup, gunakan cache/default');
+    // Kalau cache expired masih ada, pakai cache lama sebagai fallback
+    if (cached) return cached.metadata;
     return null;
   }
+}
+
+export function invalidateGroupMetadataCache(jid: string): void {
+  groupMetadataCache.delete(jid);
 }
 
 export function getReconnectAttempts(): number {
