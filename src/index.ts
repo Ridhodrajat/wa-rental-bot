@@ -3,6 +3,7 @@ import { initDatabase, closeDatabase } from './database/db';
 import { runMigrations } from './database/migrations';
 import { startWhatsApp } from './connection/whatsapp';
 import { RentalService } from './services/rentalService';
+import { RentalNotificationService } from './services/rentalNotificationService';
 import { BackupService } from './services/backupService';
 import logger from './utils/logger';
 
@@ -32,21 +33,39 @@ async function main(): Promise<void> {
     logger.warn({ error }, 'Gagal memuat override owner, memakai .env');
   }
 
-  // Jalankan scheduler pemeriksaan rental & backup (housekeeping)
-  // Dilakukan setiap 1 jam secara periodik
-  const schedulerIntervalMs = 60 * 60 * 1000;
-  setInterval(() => {
+  async function runRentalHousekeeping(): Promise<void> {
     try {
       logger.info('Menjalankan housekeeping scheduler...');
-      RentalService.processExpired();
+      const notifications = RentalService.processExpired();
+
+      // Kirim notifikasi ke grup yang terkena expired / deleted
+      for (const notification of notifications) {
+        try {
+          if (notification.event === 'EXPIRED') {
+            await RentalNotificationService.sendExpiredNotification(notification.groupId);
+          } else {
+            await RentalNotificationService.sendDeletedNotification(notification.groupId);
+          }
+        } catch (error) {
+          logger.error({ error, notification }, 'Gagal mengirim notifikasi rental scheduler');
+        }
+      }
+
       BackupService.createBackup();
     } catch (error) {
       logger.error({ error }, 'Error pada scheduler');
     }
+  }
+
+  // Jalankan scheduler pemeriksaan rental & backup (housekeeping)
+  // Dilakukan setiap 5 menit agar notifikasi tepat waktu
+  const schedulerIntervalMs = 5 * 60 * 1000;
+  setInterval(() => {
+    void runRentalHousekeeping();
   }, schedulerIntervalMs);
 
   // Jalankan pemeriksaan awal saat startup
-  RentalService.processExpired();
+  await runRentalHousekeeping();
 
   // Start WhatsApp connection
   await startWhatsApp();
