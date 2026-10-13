@@ -97,16 +97,21 @@ export async function handleGroupsUpsert(
     if (!isActive) {
       logger.warn(
         { groupId, groupName },
-        'Bot dimasukkan ke grup tanpa otorisasi aktif. Keluar dari grup.'
+        'Bot dimasukkan ke grup tanpa otorisasi aktif. Menunggu owner mengaktifkan sewa.'
       );
 
       try {
         await sock.sendMessage(groupId, {
-          text: `⚠️ Bot ini adalah bot sewa terotorisasi.\n\nGrup ini belum memiliki masa sewa aktif.\nSilakan hubungi owner bot untuk menyewa/mengotorisasi grup ini.\n\nBot akan keluar dari grup.`,
+          text:
+            `⚠️ *Bot Sewa Terotorisasi*\n\n` +
+            `Grup ini belum memiliki masa sewa aktif.\n` +
+            `Owner dapat menambahkan sewa dengan perintah:\n` +
+            `*.addsewa <durasi>*\n\n` +
+            `Contoh: *.addsewa 30h*\n\n` +
+            `Bot akan keluar otomatis jika sewa tidak ditambahkan.`,
         });
-        await sock.groupLeave(groupId);
       } catch (error) {
-        logger.error({ error, groupId }, 'Gagal keluar dari grup tidak terotorisasi');
+        logger.error({ error, groupId }, 'Gagal mengirim peringatan grup tidak terotorisasi');
       }
     } else {
       logger.info({ groupId, groupName }, 'Bot dimasukkan ke grup terotorisasi');
