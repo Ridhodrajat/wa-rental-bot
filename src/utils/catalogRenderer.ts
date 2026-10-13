@@ -84,7 +84,7 @@ export function renderCatalog(params: {
     productBlock = `${template.productPrefix}(belum ada produk)`;
   } else {
     productBlock = params.products
-      .map((p) => `${template.productPrefix}${p.original_name}`)
+      .map((p) => `${template.productPrefix}${p.original_name.toUpperCase()}`)
       .join('\n');
   }
 
