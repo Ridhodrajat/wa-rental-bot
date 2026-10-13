@@ -13,7 +13,7 @@ export class ProductRepository {
   static getByGroupId(groupId: string): ProductRecord[] {
     const db = getDatabase();
     return db
-      .prepare('SELECT * FROM products WHERE group_id = ? ORDER BY id ASC')
+      .prepare('SELECT * FROM products WHERE group_id = ? ORDER BY name ASC')
       .all(groupId) as unknown as ProductRecord[];
   }
 
