@@ -14,7 +14,15 @@
  * - @nomor      : nomor/identitas transaksi (jika tersedia)
  */
 
-export type TemplateFeature = 'welcome' | 'goodbye' | 'proses' | 'done' | 'open' | 'close';
+export type TemplateFeature =
+  | 'welcome'
+  | 'goodbye'
+  | 'proses'
+  | 'done'
+  | 'open'
+  | 'close'
+  | 'rental_expired'
+  | 'rental_deleted';
 
 export interface TemplateOption {
   id: number;
@@ -164,6 +172,57 @@ export const MESSAGE_TEMPLATES: Record<TemplateFeature, TemplateOption[]> = {
       id: 3,
       label: 'Playful Kawaii',
       text: `(˶ᵔ ᵕ ᵔ˶) grup CLOSE~\n\ntidur dulu ya semuanya, admin saja yang aktif ✨`,
+    },
+  ],
+  rental_expired: [
+    {
+      id: 1,
+      label: 'Cute Pastel',
+      text:
+        `꒰ა ⏰ ໒꒱ sewa grup akan segera berakhir ♡\n\n` +
+        `hai semuanya~ masa aktif @namagrup sudah habis hari ini.\n` +
+        `grup masih bisa dipakai selama masa tenggang 30 hari ya.\n\n` +
+        `jangan lupa hubungi owner untuk perpanjang sewa ♡`,
+    },
+    {
+      id: 2,
+      label: 'Soft Minimal',
+      text:
+        `⏰ perhatian semuanya\n\n` +
+        `masa sewa @namagrup sudah berakhir. grup masih aktif selama masa tenggang 30 hari.\n` +
+        `silakan perpanjang sewa segera.`,
+    },
+    {
+      id: 3,
+      label: 'Playful Kawaii',
+      text:
+        `(｡•́︿•̀｡) ehh masa sewa @namagrup sudah habis~\n\n` +
+        `tapi tenang, masih ada masa tenggang 30 hari kok.\n` +
+        `buruan perpanjang biar grup tetap aktif ya! ✨`,
+    },
+  ],
+  rental_deleted: [
+    {
+      id: 1,
+      label: 'Cute Pastel',
+      text:
+        `꒰ა 🥀 ໒꒱ sewa grup sudah berakhir sepenuhnya ♡\n\n` +
+        `terima kasih sudah menggunakan layanan kami.\n` +
+        `semoga harimu indah selalu ya~`,
+    },
+    {
+      id: 2,
+      label: 'Soft Minimal',
+      text:
+        `🥀 sewa grup berakhir\n\n` +
+        `masa sewa @namagrup sudah habis sepenuhnya. terima kasih atas kepercayaannya.`,
+    },
+    {
+      id: 3,
+      label: 'Playful Kawaii',
+      text:
+        `(｡•́︿•̀｡) sewa grup sudah habis total~\n\n` +
+        `terima kasih sudah pakai layanan kami. sampai jumpa lagi ya!`,
     },
   ],
 };

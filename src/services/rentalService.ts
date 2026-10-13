@@ -77,10 +77,12 @@ export class RentalService {
 
   /**
    * Proses rental yang sudah kedaluwarsa.
+   * Mengembalikan daftar event notifikasi yang perlu dikirim ke grup.
    */
-  static processExpired(): void {
+  static processExpired(): Array<{ groupId: string; event: 'EXPIRED' | 'DELETED' }> {
     const now = new Date();
     const rentals = RentalRepository.getAll();
+    const notifications: Array<{ groupId: string; event: 'EXPIRED' | 'DELETED' }> = [];
 
     for (const rental of rentals) {
       const expiresAt = new Date(rental.expires_at).getTime();
@@ -100,6 +102,7 @@ export class RentalService {
           note: `Memasuki masa tenggang hingga ${formatToTimezone(rental.grace_until)}`,
         });
         logger.info({ groupId: rental.group_id }, 'Rental masuk grace period');
+        notifications.push({ groupId: rental.group_id, event: 'EXPIRED' });
       } else if (rental.status === 'EXPIRED_GRACE' && nowTime >= graceUntil) {
         // Hapus rental dan data grup
         RentalRepository.logHistory({
@@ -111,10 +114,13 @@ export class RentalService {
           performed_by: 'SYSTEM',
           note: 'Data grup dihapus setelah masa tenggang berakhir',
         });
+        notifications.push({ groupId: rental.group_id, event: 'DELETED' });
         this.deleteRentalAndGroupData(rental.group_id);
         logger.info({ groupId: rental.group_id }, 'Rental dan data grup dihapus');
       }
     }
+
+    return notifications;
   }
 
   /**

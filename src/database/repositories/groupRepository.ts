@@ -48,4 +48,12 @@ export class GroupRepository {
     const db = getDatabase();
     db.prepare('DELETE FROM groups WHERE group_id = ?').run(groupId);
   }
+
+  static getGroupName(groupId: string): string | null {
+    const db = getDatabase();
+    const row = db
+      .prepare('SELECT group_name FROM groups WHERE group_id = ?')
+      .get(groupId) as unknown as { group_name: string } | undefined;
+    return row?.group_name ?? null;
+  }
 }
