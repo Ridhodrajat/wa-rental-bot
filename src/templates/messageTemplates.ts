@@ -90,27 +90,30 @@ export const MESSAGE_TEMPLATES: Record<TemplateFeature, TemplateOption[]> = {
       id: 1,
       label: 'Cute Pastel',
       text:
-        `୨୧ order kamu sedang diproses ♡\n\n` +
-        `👤 @user\n` +
-        `📦 @produk\n` +
-        `mohon ditunggu ya, sabar sedikit~ ☕`,
+        `╭───「 TRANSAKSI DIPROSES 」───\n` +
+        `│ 🙋 Customer : @user\n` +
+        `│ 📆 Tanggal  : @tanggal\n` +
+        `│ ⏰ Waktu    : @jam WIB\n` +
+        `│ 🛍️ Pesanan  : @produk\n` +
+        `╰─────────────────────────────`,
     },
     {
       id: 2,
       label: 'Soft Minimal',
       text:
-        `⏳ pesanan sedang diproses\n\n` +
-        `@user — @produk\n` +
-        `kami akan segera memproses orderanmu ♡`,
+        `⏳ Pesanan Sedang Diproses\n\n` +
+        `Customer : @user\n` +
+        `Produk   : @produk\n` +
+        `Waktu    : @jam WIB`,
     },
     {
       id: 3,
       label: 'Playful Kawaii',
       text:
-        `(っ˘ω˘ς) pesananmu lagi diolah~\n\n` +
+        `(っ˘ω˘ς) Pesananmu lagi diolah~\n\n` +
         `👤 @user\n` +
         `🛍️ @produk\n` +
-        `tunggu bentar ya, jangan kemana-mana! ✨`,
+        `⏰ @jam WIB`,
     },
   ],
   done: [
@@ -118,26 +121,33 @@ export const MESSAGE_TEMPLATES: Record<TemplateFeature, TemplateOption[]> = {
       id: 1,
       label: 'Cute Pastel',
       text:
-        `𐙚 pesanan selesai! terima kasih sudah order ♡\n\n` +
-        `👤 @user\n` +
-        `📦 @produk\n\n` +
-        `semoga puas ya, jangan lupa repeat order ♡`,
+        `╭───「 TRANSAKSI SELESAI 」───\n` +
+        `│ 🙋 Customer : @user\n` +
+        `│ 📆 Tanggal  : @tanggal\n` +
+        `│ ⏰ Waktu    : @jam WIB\n` +
+        `│ 🆔 TRX-@nomor\n` +
+        `│ 🛍️ Pesanan  : @produk\n` +
+        `╰─────────────────────────────`,
     },
     {
       id: 2,
       label: 'Soft Minimal',
       text:
-        `✅ pesanan selesai\n\n` +
-        `terima kasih @user telah order @produk.\n` +
-        `see you next time ♡`,
+        `✅ Pesanan Selesai\n\n` +
+        `Customer : @user\n` +
+        `Produk   : @produk\n` +
+        `Waktu    : @jam WIB\n` +
+        `ID Transaksi : TRX-@nomor`,
     },
     {
       id: 3,
       label: 'Playful Kawaii',
       text:
-        `(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ done!\n\n` +
-        `makasih @user sudah order @produk 𖹭\n` +
-        `happy terus ya, ditunggu orderan selanjutnya! 🎀`,
+        `(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ DONE!\n\n` +
+        `👤 @user\n` +
+        `🛍️ @produk\n` +
+        `⏰ @jam WIB\n` +
+        `🆔 TRX-@nomor`,
     },
   ],
   open: [

@@ -24,6 +24,7 @@ import * as modCmd from './moderation';
 import * as settingsCmd from './groupSettings';
 import * as utilCmd from './utility';
 import * as catalogCmd from './catalog';
+import * as catalogIOCmd from './catalogIO';
 
 /**
  * Registry seluruh command.
@@ -77,6 +78,10 @@ register({ name: 'previewlist', handler: catalogCmd.handlePreviewList, ownerOnly
 register({ name: 'setlistheader', handler: catalogCmd.handleSetListHeader, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur header katalog manual', category: 'product' });
 register({ name: 'setlistfooter', handler: catalogCmd.handleSetListFooter, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur footer katalog manual', category: 'product' });
 register({ name: 'resetlisttemplate', handler: catalogCmd.handleResetListTemplate, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template katalog', category: 'product' });
+
+// ============ Catalog Import / Export ============
+register({ name: 'exportlist', handler: catalogIOCmd.handleExportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Export katalog ke Excel/Teks', category: 'product' });
+register({ name: 'importlist', handler: catalogIOCmd.handleImportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Import katalog dari file', category: 'product' });
 
 // ============ Welcome / Goodbye ============
 register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Kelola welcome (on/off/preview)', category: 'welcome' });
