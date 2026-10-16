@@ -25,6 +25,8 @@ import * as settingsCmd from './groupSettings';
 import * as utilCmd from './utility';
 import * as catalogCmd from './catalog';
 import * as catalogIOCmd from './catalogIO';
+import * as advModCmd from './advancedMod';
+import * as scheduleCmd from './storeSchedule';
 
 /**
  * Registry seluruh command.
@@ -107,6 +109,28 @@ register({ name: 'promote', handler: modCmd.handlePromote, ownerOnly: false, adm
 register({ name: 'demote', handler: modCmd.handleDemote, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Turunkan admin', category: 'moderation' });
 register({ name: 'linkgc', handler: modCmd.handleLinkGc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ambil tautan grup', category: 'moderation' });
 register({ name: 'resetlinkgc', handler: modCmd.handleResetLinkGc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset tautan grup', category: 'moderation' });
+
+// ============ Advanced Moderation ============
+register({ name: 'deletemsg', handler: advModCmd.handleDeleteMsg, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus pesan (reply)', category: 'moderation' });
+register({ name: 'revokelinkgc', handler: advModCmd.handleRevokeLinkGc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset tautan grup', category: 'moderation' });
+register({ name: 'addadmin', handler: advModCmd.handleAddAdmin, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Jadikan admin', category: 'moderation' });
+register({ name: 'addblacklist', handler: advModCmd.handleAddBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tambah ke blacklist', category: 'moderation' });
+register({ name: 'editblacklist', handler: advModCmd.handleEditBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Edit blacklist', category: 'moderation' });
+register({ name: 'deleteblacklist', handler: advModCmd.handleDeleteBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus dari blacklist', category: 'moderation' });
+register({ name: 'viewblacklist', handler: advModCmd.handleViewBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Lihat blacklist', category: 'moderation' });
+register({ name: 'blacklisthelp', handler: advModCmd.handleBlacklistHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan blacklist', category: 'moderation' });
+
+// ============ Store Schedule & Data ============
+register({ name: 'setopen', handler: scheduleCmd.handleSetOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka toko (template)', category: 'settings' });
+register({ name: 'setclose', handler: scheduleCmd.handleSetClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup toko (template)', category: 'settings' });
+register({ name: 'autoopen', handler: scheduleCmd.handleAutoOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka otomatis on/off', category: 'settings' });
+register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam buka otomatis', category: 'settings' });
+register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings' });
+register({ name: 'autocloseset', handler: scheduleCmd.handleAutoCloseSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam tutup otomatis', category: 'settings' });
+register({ name: 'dataorder', handler: scheduleCmd.handleDataOrder, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order otomatis on/off', category: 'settings' });
+register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan hari ini (PDF)', category: 'settings' });
+register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan kemarin (PDF)', category: 'settings' });
+register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
 
 // ============ Group Settings ============
 register({ name: 'setppgc', handler: settingsCmd.handleSetPpgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah foto profil grup', category: 'settings' });
