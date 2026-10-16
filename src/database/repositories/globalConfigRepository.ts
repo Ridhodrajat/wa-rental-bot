@@ -1,17 +1,17 @@
 import { getDatabase } from '../db';
 import { nowUtc } from '../../utils/time';
 
-/**
- * Repository konfigurasi global (key-value) yang hanya dikelola owner.
- */
+export interface GlobalConfigRecord {
+  key: string;
+  value: string;
+  updated_at: string;
+}
 
 export class GlobalConfigRepository {
   static get(key: string): string | null {
     const db = getDatabase();
-    const row = db
-      .prepare('SELECT value FROM global_config WHERE key = ?')
-      .get(key) as unknown as { value: string } | undefined;
-    return row?.value ?? null;
+    const row = db.prepare('SELECT value FROM global_config WHERE key = ?').get(key) as { value: string } | undefined;
+    return row ? row.value : null;
   }
 
   static set(key: string, value: string): void {
@@ -23,8 +23,8 @@ export class GlobalConfigRepository {
     `).run(key, value, nowUtc());
   }
 
-  static delete(key: string): void {
-    const db = getDatabase();
-    db.prepare('DELETE FROM global_config WHERE key = ?').run(key);
+  static getInt(key: string, defaultValue: number): number {
+    const val = this.get(key);
+    return val ? parseInt(val, 10) : defaultValue;
   }
 }
