@@ -121,8 +121,6 @@ register({ name: 'viewblacklist', handler: advModCmd.handleViewBlacklist, ownerO
 register({ name: 'blacklisthelp', handler: advModCmd.handleBlacklistHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan blacklist', category: 'moderation' });
 
 // ============ Store Schedule & Data ============
-register({ name: 'setopen', handler: scheduleCmd.handleSetOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka toko (template)', category: 'settings' });
-register({ name: 'setclose', handler: scheduleCmd.handleSetClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup toko (template)', category: 'settings' });
 register({ name: 'autoopen', handler: scheduleCmd.handleAutoOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka otomatis on/off', category: 'settings' });
 register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam buka otomatis', category: 'settings' });
 register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings' });

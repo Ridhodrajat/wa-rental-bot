@@ -91,6 +91,8 @@ export async function startWhatsApp(): Promise<WASocket> {
   // Handler perubahan peserta grup (welcome/goodbye)
   sock.ev.on('group-participants.update', async (update) => {
     try {
+      // Metadata berubah (mis. promote/demote admin) -> segarkan cache
+      if (update?.id) invalidateGroupMetadataCache(update.id);
       await handleGroupParticipantsUpdate(sock!, update as any);
     } catch (error) {
       logger.error({ error }, 'Error pada update peserta grup (diisolasi)');

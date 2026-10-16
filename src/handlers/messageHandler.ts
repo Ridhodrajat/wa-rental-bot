@@ -1,7 +1,7 @@
 import type { WASocket } from '@whiskeysockets/baileys';
 import { CommandContext, ReplyFn, ReplyOptions } from '../types';
 import { parseCommand, isJidGroup, extractJidNumber } from '../utils/parser';
-import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata } from '../utils/permissions';
+import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata, participantIsAdmin } from '../utils/permissions';
 import { getGroupMetadata } from '../connection/whatsapp';
 import { getCommandNames, getCommand } from '../commands/index';
 import { RentalService } from '../services/rentalService';
@@ -79,9 +79,25 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
 
   if (isGroup && groupMetadata) {
     isAdminUser = isAdminFromJids(allSenderJids, groupMetadata);
-    // Cek apakah bot adalah admin
-    const botJids = [sock.user!.id, sock.user!.id.split(':')[0] + '@s.whatsapp.net'];
+    // Kumpulkan semua varian JID bot (nomor telepon & LID)
+    const botUser = sock.user as any;
+    const botJids = [botUser?.id, botUser?.lid, botUser?.jid].filter(
+      (x: any): x is string => typeof x === 'string' && x.length > 0
+    );
     isBotAdminUser = isBotAdminFromMetadata(botJids, groupMetadata);
+
+    if (!isBotAdminUser) {
+      logger.debug(
+        {
+          chatJid,
+          botJids,
+          adminJids: groupMetadata.participants
+            .filter((p: any) => participantIsAdmin(p))
+            .map((p: any) => ({ id: p.id, lid: p.lid, jid: p.jid })),
+        },
+        'Bot belum terdeteksi sebagai admin grup'
+      );
+    }
   }
 
   // Fungsi reply aman (mendukung teks, mention, dan gambar)
