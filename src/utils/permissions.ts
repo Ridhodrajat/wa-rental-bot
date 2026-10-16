@@ -51,18 +51,43 @@ export function isOwnerFromJids(jids: string[], msg?: any): boolean {
 }
 
 /**
+ * Ambil semua identitas angka dari sekumpulan JID.
+ * WhatsApp bisa memakai format @s.whatsapp.net (nomor) maupun @lid (anonim),
+ * sehingga perbandingan dilakukan pada bagian angkanya agar cocok lintas format.
+ */
+function jidNumbers(jids: Array<string | null | undefined>): Set<string> {
+  const set = new Set<string>();
+  for (const jid of jids) {
+    if (typeof jid !== 'string' || jid.length === 0) continue;
+    const num = extractJidNumber(jid);
+    if (num) set.add(num);
+  }
+  return set;
+}
+
+export function participantIsAdmin(p: any): boolean {
+  return (
+    p?.admin === 'admin' ||
+    p?.admin === 'superadmin' ||
+    p?.isAdmin === true ||
+    p?.isSuperAdmin === true
+  );
+}
+
+/**
  * Cek apakah pengirim adalah admin grup (berdasarkan salah satu JID).
+ * Membandingkan bagian angka dari semua varian JID (id, lid, jid, phoneNumber).
  */
 export function isAdminFromJids(jids: string[], groupMetadata: any): boolean {
   if (!groupMetadata || !groupMetadata.participants) return false;
+  const senderNumbers = jidNumbers(jids);
+  if (senderNumbers.size === 0) return false;
+
   for (const p of groupMetadata.participants) {
-    const participantJids = [p.id, p.phoneNumber, p.lid, p.id ? p.id.split(':')[0] + '@s.whatsapp.net' : null].filter(
-      (x: any): x is string => typeof x === 'string' && x.length > 0
-    );
-    const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
-    if (!isAdmin) continue;
-    for (const pj of participantJids) {
-      if (jids.includes(pj)) return true;
+    if (!participantIsAdmin(p)) continue;
+    const pNumbers = jidNumbers([p.id, p.lid, p.jid, p.phoneNumber]);
+    for (const n of pNumbers) {
+      if (senderNumbers.has(n)) return true;
     }
   }
   return false;
@@ -70,17 +95,18 @@ export function isAdminFromJids(jids: string[], groupMetadata: any): boolean {
 
 /**
  * Cek apakah bot adalah admin grup.
+ * Membandingkan bagian angka dari semua varian JID bot dengan varian JID peserta admin.
  */
 export function isBotAdminFromMetadata(botJids: string[], groupMetadata: any): boolean {
   if (!groupMetadata || !groupMetadata.participants) return false;
+  const botNumbers = jidNumbers(botJids);
+  if (botNumbers.size === 0) return false;
+
   for (const p of groupMetadata.participants) {
-    const participantJids = [p.id, p.phoneNumber, p.lid, p.id ? p.id.split(':')[0] + '@s.whatsapp.net' : null].filter(
-      (x: any): x is string => typeof x === 'string' && x.length > 0
-    );
-    const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
-    if (!isAdmin) continue;
-    for (const pj of participantJids) {
-      if (botJids.includes(pj)) return true;
+    if (!participantIsAdmin(p)) continue;
+    const pNumbers = jidNumbers([p.id, p.lid, p.jid, p.phoneNumber]);
+    for (const n of pNumbers) {
+      if (botNumbers.has(n)) return true;
     }
   }
   return false;
