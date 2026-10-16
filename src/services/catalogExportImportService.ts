@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import ExcelJS, { Worksheet, Row } from 'exceljs';
 import fs from 'fs';
 import path from 'path';
 import { ProductRepository } from '../database/repositories/productRepository';
@@ -72,7 +72,7 @@ export class CatalogExportImportService {
       await workbook.xlsx.readFile(filePath);
       const sheet = workbook.worksheets[0];
       if (sheet) {
-        sheet.eachRow((row, rowNumber) => {
+        sheet.eachRow((row: Row, rowNumber: number) => {
           if (rowNumber === 1) return; // skip header
           const name = String(row.getCell(1).value ?? '').trim();
           const description = String(row.getCell(2).value ?? '').trim().replace(/\\n/g, '\n');
