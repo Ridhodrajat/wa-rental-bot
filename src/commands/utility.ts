@@ -19,24 +19,32 @@ export async function handleAfk(ctx: CommandContext, reply: ReplyFn): Promise<vo
   );
 }
 
-export async function handlePing(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+export async function handleStatus(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   const start = Date.now();
+  const db = getDatabase();
 
-  // Cek kesehatan database dengan query ringan (bukan query berat)
-  let dbStatus = 'OK';
+  // Hitung pesanan harian (dari history)
+  let todayOrders = 0;
   try {
-    const db = getDatabase();
-    db.prepare('SELECT 1').get();
-  } catch {
-    dbStatus = 'ERROR';
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const row = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM rental_history 
+      WHERE action = 'CREATE' AND created_at LIKE ?
+    `).get(`${today}%`) as { count: number };
+    todayOrders = row?.count || 0;
+  } catch (error) {
+    // abaikan jika tabel history belum lengkap/error
   }
 
   const latency = Date.now() - start;
 
   await reply(
-    `🏓 *PONG!* Bot aktif.\n` +
-    `⏱️ Response: ${latency} ms\n` +
-    `🗄️ Database: ${dbStatus}`
+    `📊 *STATUS TEKNIS BOT*\n\n` +
+    `🌐 Koneksi: *Aktif*\n` +
+    `⚡ Kecepatan: *${latency} ms*\n` +
+    `🛍️ Pesanan Hari Ini: *${todayOrders}*`
   );
 }
 

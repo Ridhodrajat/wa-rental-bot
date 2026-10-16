@@ -79,7 +79,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
 
   if (isGroup && groupMetadata) {
     isAdminUser = isAdminFromJids(allSenderJids, groupMetadata);
-    const botJids = [sock.user!.id];
+    // Cek apakah bot adalah admin
+    const botJids = [sock.user!.id, sock.user!.id.split(':')[0] + '@s.whatsapp.net'];
     isBotAdminUser = isBotAdminFromMetadata(botJids, groupMetadata);
   }
 
@@ -150,7 +151,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
 
     // Command yang dikecualikan dari cek rental aktif
     const exemptCommands = [
-      'menu', 'cekmenu', 'owner', 'ping', 'bot', 'ceksewa', 'listsewa',
+      'menu', 'cekmenu', 'owner', 'status', 'bot', 'ceksewa', 'listsewa',
       'addsewa', 'delsewa', 'antiprivate', 'setprivatelimit', 'autoblock',
       'cekantiprivate', 'setowner',
     ];

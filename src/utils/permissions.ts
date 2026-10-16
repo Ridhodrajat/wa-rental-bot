@@ -56,7 +56,7 @@ export function isOwnerFromJids(jids: string[], msg?: any): boolean {
 export function isAdminFromJids(jids: string[], groupMetadata: any): boolean {
   if (!groupMetadata || !groupMetadata.participants) return false;
   for (const p of groupMetadata.participants) {
-    const participantJids = [p.id, p.phoneNumber, p.lid].filter(
+    const participantJids = [p.id, p.phoneNumber, p.lid, p.id ? p.id.split(':')[0] + '@s.whatsapp.net' : null].filter(
       (x: any): x is string => typeof x === 'string' && x.length > 0
     );
     const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
@@ -74,7 +74,7 @@ export function isAdminFromJids(jids: string[], groupMetadata: any): boolean {
 export function isBotAdminFromMetadata(botJids: string[], groupMetadata: any): boolean {
   if (!groupMetadata || !groupMetadata.participants) return false;
   for (const p of groupMetadata.participants) {
-    const participantJids = [p.id, p.phoneNumber, p.lid].filter(
+    const participantJids = [p.id, p.phoneNumber, p.lid, p.id ? p.id.split(':')[0] + '@s.whatsapp.net' : null].filter(
       (x: any): x is string => typeof x === 'string' && x.length > 0
     );
     const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';

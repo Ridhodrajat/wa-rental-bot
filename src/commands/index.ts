@@ -108,12 +108,13 @@ register({ name: 'setppgc', handler: settingsCmd.handleSetPpgc, ownerOnly: false
 register({ name: 'setnamegc', handler: settingsCmd.handleSetNamegc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah nama grup', category: 'settings' });
 register({ name: 'setdesgc', handler: settingsCmd.handleSetDesgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah deskripsi grup', category: 'settings' });
 register({ name: 'setbot', handler: settingsCmd.handleSetBot, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Simpan konfigurasi bot', category: 'settings' });
-register({ name: 'updatesetbot', handler: settingsCmd.handleUpdateSetBot, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah konfigurasi bot', category: 'settings' });
-register({ name: 'delsetbot', handler: settingsCmd.handleDelSetBot, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus konfigurasi bot', category: 'settings' });
+// Hapus updatesetbot & delsetbot dari registry
 
 // ============ Utility ============
 register({ name: 'afk', handler: utilCmd.handleAfk, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Aktifkan status AFK', category: 'utility' });
-register({ name: 'ping', handler: utilCmd.handlePing, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek respons bot', category: 'utility' });
+register({ name: 'status', handler: utilCmd.handleStatus, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek status teknis bot', category: 'utility' });
+register({ name: 'p', handler: txCmd.handleProses, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Proses pesanan (alias)', category: 'transaction', hidden: true });
+register({ name: 'd', handler: txCmd.handleDone, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Selesaikan pesanan (alias)', category: 'transaction', hidden: true });
 register({ name: 'bot', handler: utilCmd.handleBotInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Info bot', category: 'utility' });
 
 export function getCommandNames(): Set<string> {
