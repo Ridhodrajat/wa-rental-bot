@@ -11,5 +11,5 @@ logs/
 *.traineddata.gz
 
 # Word/Office lock files & file sementara
-~\$*.docx
+~$*.docx
 PANDUAN_BOT_BARU.docx
