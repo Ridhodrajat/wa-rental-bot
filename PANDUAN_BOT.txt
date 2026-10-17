@@ -224,7 +224,8 @@ Cara bot menghitung pendapatan:
   1) .done 50000 - catat Rp50.000 (reply chat pembeli agar nama pembeli ikut tersimpan).
   2) .done Netflix 50k - catat produk "Netflix" seharga Rp50.000.
   3) .done sambil reply FOTO bukti transfer - bot memakai OCR untuk membaca nominal dari foto, lalu menampilkan hasilnya dan meminta konfirmasi. Balas "ya" untuk menyimpan, atau ketik nominal yang benar (contoh: 50000). Ketik "batal" untuk membatalkan.
-  • Angka yang didukung: 50000, 50.000, Rp50.000, 50k, 50rb, 1jt, 1,5jt.
+  • Angka yang didukung: 250, 50000, 50.000, Rp50.000, 50k, 50rb, 1jt, 1,5jt (berapapun, termasuk nominal kecil).
+  • Letakkan nominal di AKHIR pesan, contoh: ".done canva 1b 250". Kata terakhir yang murni angka dianggap nominal, sehingga nama produk seperti "netflix 2u" atau "canva 1b" tidak salah dianggap nominal.
   • Setiap pesanan disimpan dengan tanggal operasional (zona waktu bot), sehingga laporan harian akurat.
   • Batas OCR: kualitas pembacaan tergantung kejelasan foto. Bila gagal terbaca, admin cukup mengetik nominal manual.
 

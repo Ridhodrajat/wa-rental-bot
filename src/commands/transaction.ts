@@ -7,7 +7,8 @@ import { PendingOrderService } from '../services/pendingOrderService';
 import { downloadImageBuffer } from '../services/mediaService';
 import { ocrImageText } from '../services/ocrService';
 import { getSocket } from '../connection/whatsapp';
-import { parseAmountToNumber, extractAmountFromText, formatRupiah } from '../utils/amount';
+import { extractAmountFromText, formatRupiah } from '../utils/amount';
+import { splitProductAndAmount } from '../utils/orderArgs';
 import logger from '../utils/logger';
 
 /**
@@ -85,33 +86,6 @@ async function sendTransaction(
 }
 
 /**
- * Cek apakah sebuah token (kata) berupa nominal rupiah yang wajar.
- * Token dianggap nominal bila punya suffix (k/rb/jt) atau bernilai >= 1000.
- */
-function isAmountToken(tok: string): boolean {
-  if (!tok) return false;
-  const n = parseAmountToNumber(tok);
-  if (n == null) return false;
-  if (/(k|rb|ribu|jt|juta)$/i.test(tok.replace(/rp\.?/gi, ''))) return true;
-  return n >= 1000;
-}
-
-/**
- * Pisahkan produk & nominal dari argumen. Hanya token TERAKHIR yang
- * dianggap nominal, sehingga nama produk yang mengandung angka tetap aman.
- * Contoh: "Netflix 50k" -> { product: "Netflix", amount: 50000 }
- */
-function splitProductAndAmount(fullArgs: string): { product: string; amount: number | null } {
-  const tokens = fullArgs.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return { product: '', amount: null };
-  const last = tokens[tokens.length - 1];
-  if (isAmountToken(last)) {
-    return { product: tokens.slice(0, -1).join(' '), amount: parseAmountToNumber(last) };
-  }
-  return { product: tokens.join(' '), amount: null };
-}
-
-/**
  * Catat order saat admin memakai .done.
  * - Nominal eksplisit (mis. .done 50k) -> simpan langsung.
  * - Ada foto bukti transfer -> OCR nominal lalu tunggu konfirmasi admin.
@@ -146,8 +120,13 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
 
   try {
     await reply('🔎 Membaca foto bukti transfer...');
+    logger.info({ chatJid: ctx.chatJid, bytes: imageBuffer.length }, 'OCR: gambar bukti transfer diterima');
     const ocrText = await ocrImageText(imageBuffer);
     const ocrAmount = extractAmountFromText(ocrText);
+    logger.info(
+      { chatJid: ctx.chatJid, textLength: ocrText?.length ?? 0, ocrAmount },
+      'OCR: hasil pembacaan'
+    );
 
     PendingOrderService.set({
       groupId: ctx.chatJid,
