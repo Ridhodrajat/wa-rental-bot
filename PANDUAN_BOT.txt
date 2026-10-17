@@ -180,6 +180,11 @@ Mengirim pesan status pesanan. Cocok dipakai dengan cara mereply chat pelanggan.
   • .done - mengirim template "selesai" (tag orang yang di-reply).
   • .p - alias dari .proses (lebih cepat).
   • .d - alias dari .done (lebih cepat).
+Pencatatan pendapatan otomatis:
+  • .d 50000 - kirim status selesai SEKALIGUS mencatat pendapatan Rp50.000 (sebaiknya reply chat pelanggan).
+  • .d Netflix 50k - sama, sekaligus menyimpan nama produk.
+  • .d (reply foto bukti transfer) - bot membaca nominal dari foto, lalu meminta konfirmasi.
+  • .setnominal <angka> - mengoreksi nominal pesanan terakhir bila salah input.
 Mengatur template:
   • .proses on|off - mengaktifkan/mematikan fitur proses.
   • .proses list - melihat pilihan template proses.
@@ -200,15 +205,28 @@ Catatan: bot harus admin grup untuk .open dan .close.
 
 6.7 Jadwal Otomatis (Auto Open / Close) & Data Order
 
+Jadwal otomatis (masih dalam pengembangan - lihat bagian 11):
   • .autoopen on|off - mengaktifkan/mematikan buka grup otomatis.
   • .autoopenset HH:MM - mengatur jam buka otomatis. Contoh: .autoopenset 08:00
   • .autoclose on|off - mengaktifkan/mematikan tutup grup otomatis.
   • .autocloseset HH:MM - mengatur jam tutup otomatis. Contoh: .autocloseset 22:00
-  • .dataorder on|off - mengaktifkan/mematikan laporan order otomatis.
-  • .dataordernow - laporan order hari ini.
-  • .dataorderlast - laporan order kemarin.
-  • .dataorderhelp - bantuan data order.
-(Catatan: fitur ini masih dalam tahap pengembangan - lihat bagian 11.)
+
+Data Order & Pendapatan (SUDAH AKTIF):
+  • .dataorder on|off - bila ON, bot otomatis mengirim ringkasan order hari ini setiap kali .close.
+  • .dataordernow - menampilkan laporan order HARI INI (jumlah order + total pendapatan).
+  • .dataorderlast - menampilkan laporan order KEMARIN.
+  • .dataorderhelp - panduan singkat data order.
+  • .setnominal <angka> - mengoreksi nominal pesanan terakhir.
+
+Cara bot menghitung pendapatan:
+  • Bot TIDAK menebak pendapatan dari chat biasa. Pendapatan hanya dihitung dari pesanan yang DICATAT admin.
+  • Mencatat pesanan ada 3 cara:
+  1) .done 50000 - catat Rp50.000 (reply chat pembeli agar nama pembeli ikut tersimpan).
+  2) .done Netflix 50k - catat produk "Netflix" seharga Rp50.000.
+  3) .done sambil reply FOTO bukti transfer - bot memakai OCR untuk membaca nominal dari foto, lalu menampilkan hasilnya dan meminta konfirmasi. Balas "ya" untuk menyimpan, atau ketik nominal yang benar (contoh: 50000). Ketik "batal" untuk membatalkan.
+  • Angka yang didukung: 50000, 50.000, Rp50.000, 50k, 50rb, 1jt, 1,5jt.
+  • Setiap pesanan disimpan dengan tanggal operasional (zona waktu bot), sehingga laporan harian akurat.
+  • Batas OCR: kualitas pembacaan tergantung kejelasan foto. Bila gagal terbaca, admin cukup mengetik nominal manual.
 
 6.8 Welcome & Goodbye
 
@@ -297,8 +315,9 @@ Bagaimana @produk diisi: jika admin me-reply chat pelanggan lalu mengetik .prose
   • 2. Pelanggan mengetik nama produk (contoh: netflix) untuk melihat deskripsi & foto.
   • 3. Pelanggan memesan/membayar (di luar bot, sesuai kebijakan toko).
   • 4. Admin me-reply chat pelanggan lalu mengetik .p (atau .proses) untuk memberi status "diproses".
-  • 5. Setelah transaksi selesai, admin me-reply chat pelanggan lalu mengetik .d (atau .done) untuk status "selesai".
-  • 6. Jika toko ingin istirahat: admin mengetik .close untuk menutup grup, dan .open untuk membuka kembali.
+  • 5. Setelah transaksi selesai, admin me-reply chat pelanggan lalu mengetik .d 50000 (dengan nominal) ATAU .d sambil reply foto bukti transfer, agar pesanan tercatat untuk laporan pendapatan.
+  • 6. Admin bisa mengecek pendapatan kapan saja dengan .dataordernow (hari ini) atau .dataorderlast (kemarin).
+  • 7. Jika toko ingin istirahat: admin mengetik .close untuk menutup grup (bila .dataorder ON, ringkasan hari ini ikut terkirim), dan .open untuk membuka kembali.
 Tips: sesuaikan template .setproses dan .setdone dengan gaya tokomu (tersedia 3 pilihan bawaan atau teks kustom).
 
 9. PESAN OTOMATIS (SCHEDULER)
@@ -331,9 +350,9 @@ Pesan otomatis lain:
 Sebagian command sudah terdaftar dan membalas, namun penyimpanan/aksinya belum sepenuhnya aktif. Mohon tidak dijadikan janji ke pelanggan sebelum diumumkan siap:
   • Blacklist (.addblacklist, .editblacklist, .deleteblacklist, .viewblacklist) - penyimpanan permanen belum aktif.
   • .autoopen / .autoopenset / .autoclose / .autocloseset - penjadwalan nyata belum aktif.
-  • .dataorder on/off, .dataordernow, .dataorderlast - laporan PDF belum aktif.
   • .setppgc - belum benar-benar mengubah foto profil grup.
-Fitur yang sudah berfungsi penuh antara lain: menu, sewa, katalog (tambah/ubah/rename/hapus + foto), import/export katalog, template proses/done/open/close/welcome/goodbye, open/close grup, hidetag, kick/promote/demote/add, link/reset link, deletemsg, anti-private-chat, dan notifikasi sewa otomatis.
+  • Laporan .dataordernow/.dataorderlast berformat TEKS (belum berupa PDF).
+Fitur yang sudah berfungsi penuh antara lain: menu, sewa, katalog (tambah/ubah/rename/hapus + foto), import/export katalog, template proses/done/open/close/welcome/goodbye, open/close grup, hidetag, kick/promote/demote/add, link/reset link, deletemsg, anti-private-chat, data order & pendapatan (pencatatan otomatis + OCR bukti transfer + laporan harian), dan notifikasi sewa otomatis.
 
 12. CATATAN KEAMANAN
 --------------------
