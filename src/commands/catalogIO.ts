@@ -1,6 +1,7 @@
 import { CommandContext, ReplyFn } from '../types';
 import { CatalogExportImportService } from '../services/catalogExportImportService';
 import { getSocket } from '../connection/whatsapp';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import path from 'path';
 import fs from 'fs';
 import logger from '../utils/logger';
@@ -78,27 +79,56 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
   if (!(await requireAdmin(ctx, reply))) return;
 
   const msg = ctx.msg;
+  const sock = getSocket();
 
-  // Cek apakah ada file di pesan
-  let documentMessage =
-    msg?.message?.documentMessage ||
-    msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.documentMessage;
+  // Deteksi file dokumen: dikirim langsung (caption .importlist) atau di-reply
+  const directDoc = msg?.message?.documentMessage;
+  const quotedDoc = msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.documentMessage;
+  const documentMessage = directDoc || quotedDoc;
+
+  // Kalau tidak ada file tapi ada teks berisi "|", import langsung dari teks
+  const rawArgs = (ctx.fullArgs || '').trim();
+  if (!documentMessage && rawArgs.includes('|')) {
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    const tempFilePath = path.join(tempDir, `import_text_${Date.now()}.txt`);
+    try {
+      fs.writeFileSync(tempFilePath, rawArgs, 'utf-8');
+      const result = await CatalogExportImportService.importFromFile(ctx.chatJid, tempFilePath, '.txt');
+      await reply(
+        `✅ *Import Katalog Selesai*\n\n` +
+        `➕ Produk baru ditambah: ${result.added}\n` +
+        `♻️ Produk diperbarui: ${result.updated}\n` +
+        `📦 Total: ${result.added + result.updated}`
+      );
+    } catch (error) {
+      logger.error({ error }, 'Gagal import katalog dari teks');
+      await reply('❌ Gagal mengimport dari teks. Pastikan format: nama_produk|deskripsi');
+    } finally {
+      try { fs.unlinkSync(tempFilePath); } catch { /* abaikan */ }
+    }
+    return;
+  }
 
   if (!documentMessage) {
     await reply(
       `📥 *Cara Import Katalog:*\n\n` +
+      `*Metode 1 — File:*\n` +
       `1. Kirim file Excel (.xlsx) atau Teks (.txt) ke grup\n` +
-      `2. Balas file dengan caption: *.importlist*\n\n` +
-      `Format file:\n` +
-      `- Excel: 2 kolom (Nama Produk | Deskripsi)\n` +
-      `- Teks: nama_produk|deskripsi (per baris)\n\n` +
-      `Contoh teks:\n` +
-      `youtube|YouTube Premium 1 Bulan - Rp50.000\n` +
-      `netflix|Netflix 1 Bulan - Rp30.000`
+      `2. Beri caption *.importlist*, atau balas file itu dengan *.importlist*\n\n` +
+      `*Metode 2 — Teks langsung:*\n` +
+      `Ketik *.importlist* diikuti isi katalog, contoh:\n` +
+      `\`.importlist\`\n` +
+      `\`youtube|YouTube Premium 1 Bulan - Rp50.000\`\n` +
+      `\`netflix|Netflix 1 Bulan - Rp30.000\`\n\n` +
+      `*Format file Excel:* 2 kolom (Nama Produk | Deskripsi)\n` +
+      `*Format file Teks:* nama_produk|deskripsi (satu per baris)\n\n` +
+      `💡 File hasil *.exportlist* langsung kompatibel.`
     );
     return;
   }
 
+  let tempFilePath = '';
   try {
     const fileName = documentMessage.fileName || 'imported_file';
     const ext = path.extname(fileName).toLowerCase();
@@ -108,25 +138,63 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
       return;
     }
 
-    // Parse langsung dari documentMessage (tidak perlu download)
-    let importedProducts: Array<{ name: string; description: string }> = [];
+    // Bangun WAMessage yang berisi dokumen untuk diunduh
+    const targetMessage = directDoc
+      ? msg
+      : {
+          key: {
+            remoteJid: ctx.chatJid,
+            fromMe: false,
+            id: msg?.message?.extendedTextMessage?.contextInfo?.stanzaId,
+            participant: msg?.message?.extendedTextMessage?.contextInfo?.participant,
+          },
+          message: { documentMessage: quotedDoc },
+        };
 
-    if (ext === '.txt' || ext === '.csv') {
-      // Untuk file teks, Baileys menyimpan buffer di mediaKey/fileLength
-      // Alternatif: gunakan mediaMessage URL jika tersedia
-      // Untuk simplicity: minta user upload via teks command saja
-      await reply('⚠️ Fitur import .txt belum siap. Gunakan .xlsx atau copy-paste teks langsung ke group dengan .importlist');
-      return;
-    } else if (ext === '.xlsx' || ext === '.xls') {
-      // Untuk Excel, kita perlu buffer. Untuk sekarang, simplify dengan instruksi
-      await reply('⚠️ Fitur import Excel belum siap. Gunakan cara manual: .addlist untuk setiap produk atau copy-paste teks');
+    const buffer = (await downloadMediaMessage(
+      targetMessage as any,
+      'buffer',
+      {},
+      {
+        logger: logger as any,
+        reuploadRequest: (m: any) => sock.updateMediaMessage(m),
+      }
+    )) as Buffer;
+
+    if (!buffer || buffer.length === 0) {
+      await reply('❌ Gagal mengunduh file. Coba kirim ulang file-nya.');
       return;
     }
 
-    // Fallback: tidak support untuk sekarang
-    await reply('⚠️ Fitur import file belum sepenuhnya diimplementasikan. Silakan gunakan .addlist manual atau hubungi developer.');
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    tempFilePath = path.join(tempDir, `import_${Date.now()}${ext}`);
+    fs.writeFileSync(tempFilePath, buffer);
+
+    const result = await CatalogExportImportService.importFromFile(ctx.chatJid, tempFilePath, ext);
+
+    if (result.added === 0 && result.updated === 0) {
+      await reply(
+        '⚠️ Tidak ada produk yang terbaca dari file.\n\n' +
+        'Pastikan format benar:\n' +
+        '• Excel: kolom 1 = nama produk, kolom 2 = deskripsi (baris 1 header)\n' +
+        '• Teks: `nama_produk|deskripsi` satu per baris'
+      );
+      return;
+    }
+
+    await reply(
+      `✅ *Import Katalog Selesai*\n\n` +
+      `➕ Produk baru ditambah: ${result.added}\n` +
+      `♻️ Produk diperbarui: ${result.updated}\n` +
+      `📦 Total: ${result.added + result.updated}`
+    );
   } catch (error) {
     logger.error({ error, groupId: ctx.chatJid }, 'Gagal import katalog');
-    await reply('❌ Gagal mengimport katalog. Coba lagi atau hubungi admin.');
+    await reply('❌ Gagal mengimport katalog. Pastikan format file benar.');
+  } finally {
+    if (tempFilePath) {
+      try { fs.unlinkSync(tempFilePath); } catch { /* abaikan */ }
+    }
   }
 }
