@@ -62,6 +62,16 @@ export class OrderRepository {
       .all(groupId, bizDate) as unknown as OrderRecord[];
   }
 
+  /** Semua order dalam rentang tanggal operasional (inklusif). */
+  static getForGroupBetween(groupId: string, startDate: string, endDate: string): OrderRecord[] {
+    const db = getDatabase();
+    return db
+      .prepare(
+        'SELECT * FROM orders WHERE group_id = ? AND biz_date >= ? AND biz_date <= ? ORDER BY biz_date ASC, id ASC'
+      )
+      .all(groupId, startDate, endDate) as unknown as OrderRecord[];
+  }
+
   static getLastForGroup(groupId: string): OrderRecord | null {
     const db = getDatabase();
     return (
@@ -90,7 +100,20 @@ export class OrderRepository {
     totalRevenue: number;
     orders: OrderRecord[];
   } {
-    const orders = this.getForGroupOnDate(groupId, bizDate);
+    return this.summarizeRange(groupId, bizDate, bizDate);
+  }
+
+  /** Ringkasan order pada rentang tanggal operasional (inklusif). */
+  static summarizeRange(
+    groupId: string,
+    startDate: string,
+    endDate: string
+  ): {
+    count: number;
+    totalRevenue: number;
+    orders: OrderRecord[];
+  } {
+    const orders = this.getForGroupBetween(groupId, startDate, endDate);
     const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
     return { count: orders.length, totalRevenue, orders };
   }

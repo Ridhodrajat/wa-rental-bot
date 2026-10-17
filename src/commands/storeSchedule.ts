@@ -6,10 +6,18 @@ import { formatRupiah, parseAmountToNumber } from '../utils/amount';
 import {
   todayBizDate,
   yesterdayBizDate,
-  buildDailyOrderReport,
-  buildOrderReportPdf,
-  buildOrderReportFileName,
+  buildOrderSummaryText,
+  buildOrderReportXlsx,
+  orderReportFileName,
 } from '../services/orderReportService';
+import {
+  startOfWeekBizDate,
+  endOfWeekBizDate,
+  startOfMonthBizDate,
+  endOfMonthBizDate,
+  addDaysToBizDate,
+  addMonthsToBizDate,
+} from '../utils/time';
 import logger from '../utils/logger';
 
 /**
@@ -17,10 +25,15 @@ import logger from '../utils/logger';
  * - .autoopen / .autoopenset
  * - .autoclose / .autocloseset
  * - .dataorder on/off
- * - .dataordernow / .dataorderlast (laporan PDF)
+ * - .dataordernow / .dataorderlast  (harian, XLSX)
+ * - .dataorderweek / .dataorderlastweek (mingguan, XLSX)
+ * - .dataordermonth / .dataorderlastmonth (bulanan, XLSX)
  * - .dataorderhelp
  * - .setnominal
  */
+
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 async function requireAdmin(ctx: CommandContext, reply: ReplyFn): Promise<boolean> {
   if (!ctx.isGroup) {
@@ -150,29 +163,33 @@ export async function handleDataOrder(ctx: CommandContext, reply: ReplyFn): Prom
   );
 }
 
+/** Kirim laporan Excel untuk sebuah rentang tanggal. */
 async function sendOrderReport(
   ctx: CommandContext,
   reply: ReplyFn,
-  bizDate: string,
-  title: string
+  title: string,
+  tag: string,
+  startDate: string,
+  endDate: string
 ): Promise<void> {
-  const { count, totalRevenue } = OrderRepository.summarize(ctx.chatJid, bizDate);
+  const { count, totalRevenue } = OrderRepository.summarizeRange(ctx.chatJid, startDate, endDate);
+  const periode = startDate === endDate ? startDate : `${startDate} s/d ${endDate}`;
   const caption =
-    `📊 *${title}*\n🗓️ ${bizDate}\n` +
+    `📊 *${title}*\n🗓️ ${periode}\n` +
     `🧾 Total Order: *${count}*\n💰 Total Revenue: *${formatRupiah(totalRevenue)}*`;
 
   try {
-    const pdf = await buildOrderReportPdf(ctx.chatJid, bizDate, title);
+    const buf = await buildOrderReportXlsx(ctx.chatJid, title, startDate, endDate);
     const sock = getSocket();
     await sock.sendMessage(ctx.chatJid, {
-      document: pdf,
-      mimetype: 'application/pdf',
-      fileName: buildOrderReportFileName(bizDate),
+      document: buf,
+      mimetype: XLSX_MIME,
+      fileName: orderReportFileName(tag, startDate, endDate),
       caption,
     });
   } catch (error) {
-    logger.error({ error }, 'Gagal membuat PDF laporan order, kirim sebagai teks');
-    await reply(buildDailyOrderReport(ctx.chatJid, bizDate, title));
+    logger.error({ error }, 'Gagal membuat laporan Excel, kirim sebagai teks');
+    await reply(buildOrderSummaryText(ctx.chatJid, startDate, endDate, title));
   }
 }
 
@@ -180,14 +197,57 @@ export async function handleDataOrderNow(ctx: CommandContext, reply: ReplyFn): P
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  await sendOrderReport(ctx, reply, todayBizDate(), 'Laporan Order Hari Ini');
+  const today = todayBizDate();
+  await sendOrderReport(ctx, reply, 'Laporan Order Hari Ini', 'harian', today, today);
 }
 
 export async function handleDataOrderLast(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  await sendOrderReport(ctx, reply, yesterdayBizDate(), 'Laporan Order Kemarin');
+  const y = yesterdayBizDate();
+  await sendOrderReport(ctx, reply, 'Laporan Order Kemarin', 'harian', y, y);
+}
+
+export async function handleDataOrderWeek(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+  if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
+
+  const today = todayBizDate();
+  const start = startOfWeekBizDate(today);
+  const end = endOfWeekBizDate(today);
+  await sendOrderReport(ctx, reply, 'Laporan Order Minggu Ini', 'mingguan', start, end);
+}
+
+export async function handleDataOrderLastWeek(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+  if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
+
+  const today = todayBizDate();
+  const thisWeekStart = startOfWeekBizDate(today);
+  const start = addDaysToBizDate(thisWeekStart, -7);
+  const end = addDaysToBizDate(thisWeekStart, -1);
+  await sendOrderReport(ctx, reply, 'Laporan Order Minggu Lalu', 'mingguan', start, end);
+}
+
+export async function handleDataOrderMonth(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+  if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
+
+  const today = todayBizDate();
+  const start = startOfMonthBizDate(today);
+  const end = endOfMonthBizDate(today);
+  await sendOrderReport(ctx, reply, 'Laporan Order Bulan Ini', 'bulanan', start, end);
+}
+
+export async function handleDataOrderLastMonth(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
+  if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
+
+  const today = todayBizDate();
+  const start = addMonthsToBizDate(startOfMonthBizDate(today), -1);
+  const end = endOfMonthBizDate(start);
+  await sendOrderReport(ctx, reply, 'Laporan Order Bulan Lalu', 'bulanan', start, end);
 }
 
 export async function handleSetNominal(ctx: CommandContext, reply: ReplyFn): Promise<void> {
@@ -212,10 +272,14 @@ export async function handleDataOrderHelp(ctx: CommandContext, reply: ReplyFn): 
     `📚 *Panduan Data Order*\n\n` +
       `*.dataorder on|off*\n` +
       `Aktifkan laporan otomatis saat grup ditutup (.close).\n\n` +
-      `*.dataordernow*\n` +
-      `Laporan order hari ini (dikirim sebagai file PDF).\n\n` +
-      `*.dataorderlast*\n` +
-      `Laporan order kemarin (PDF).\n\n` +
+      `*Laporan Excel (.xlsx):*\n` +
+      `• *.dataordernow* — hari ini\n` +
+      `• *.dataorderlast* — kemarin\n` +
+      `• *.dataorderweek* — minggu ini (Senin–Minggu)\n` +
+      `• *.dataorderlastweek* — minggu lalu\n` +
+      `• *.dataordermonth* — bulan ini\n` +
+      `• *.dataorderlastmonth* — bulan lalu\n\n` +
+      `File berisi 2 sheet: *Detail Order* & *Ringkasan Harian*.\n\n` +
       `*.setnominal <angka>*\n` +
       `Koreksi nominal order terakhir.\n\n` +
       `*Cara mencatat order:*\n` +

@@ -1,14 +1,17 @@
-import PDFDocument from 'pdfkit';
+import ExcelJS from 'exceljs';
 import { OrderRepository } from '../database/repositories/orderRepository';
 import { OrderRecord } from '../types';
 import { formatBusinessDate, formatScheduleTime } from '../utils/time';
 import { formatRupiah } from '../utils/amount';
 
 /**
- * Laporan order/pendapatan: versi teks (untuk chat) dan versi PDF.
+ * Laporan order/pendapatan:
+ * - Versi teks singkat (untuk chat, mis. saat .close).
+ * - Versi Excel (.xlsx) untuk .dataordernow/.dataorderlast/.dataorderweek/.dataordermonth.
  *
- * PDF dirancang 2 kolom, 15 order per halaman A4, dengan paginasi aman
- * (satu baris order tidak pernah terpotong antar halaman).
+ * Struktur workbook:
+ *   1) Sheet "Detail Order"  : daftar seluruh order pada periode.
+ *   2) Sheet "Ringkasan Harian": rekap jumlah order & pendapatan per tanggal.
  */
 
 export function todayBizDate(): string {
@@ -19,11 +22,21 @@ export function yesterdayBizDate(): string {
   return formatBusinessDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
 }
 
-/** Susun laporan teks singkat untuk sebuah grup & tanggal. */
-export function buildDailyOrderReport(groupId: string, bizDate: string, title: string): string {
-  const { count, totalRevenue, orders } = OrderRepository.summarize(groupId, bizDate);
+/** Laporan teks singkat untuk sebuah rentang tanggal. */
+export function buildOrderSummaryText(
+  groupId: string,
+  startDate: string,
+  endDate: string,
+  title: string
+): string {
+  const { count, totalRevenue, orders } = OrderRepository.summarizeRange(
+    groupId,
+    startDate,
+    endDate
+  );
+  const periode = startDate === endDate ? startDate : `${startDate} s/d ${endDate}`;
 
-  let text = `📊 *${title}*\n🗓️ ${bizDate}\n\n`;
+  let text = `📊 *${title}*\n🗓️ ${periode}\n\n`;
   text += `🧾 Total Order    : *${count}*\n`;
   text += `💰 Total Revenue  : *${formatRupiah(totalRevenue)}*\n`;
 
@@ -44,110 +57,148 @@ export function buildDailyOrderReport(groupId: string, bizDate: string, title: s
   return text;
 }
 
-export function buildOrderReportFileName(bizDate: string): string {
-  return `laporan-order-${bizDate}.pdf`;
+/** Nama file Excel laporan order. */
+export function orderReportFileName(tag: string, startDate: string, endDate: string): string {
+  const range = startDate === endDate ? startDate : `${startDate}_${endDate}`;
+  return `laporan-order-${tag}-${range}.xlsx`;
 }
 
-const PDF_MARGIN = 40;
-const COL_GAP = 14;
-const ROWS_PER_PAGE = 15;
-const ROWS_LEFT = 8; // 8 di kolom kiri, 7 di kolom kanan = 15/halaman
-const ROW_H = 34;
+function buyerLabel(o: OrderRecord): string {
+  if (o.buyer_number) return o.buyer_number;
+  if (o.buyer_jid) return o.buyer_jid.split('@')[0];
+  return '-';
+}
+
+function adminLabel(o: OrderRecord): string {
+  return o.admin_jid ? o.admin_jid.split('@')[0] : '-';
+}
 
 /**
- * Buat PDF laporan order (2 kolom, 15 order per halaman A4).
+ * Susun laporan order dalam format Excel (.xlsx).
+ * Mengembalikan Buffer siap dikirim sebagai dokumen WhatsApp.
  */
-export function buildOrderReportPdf(
+export async function buildOrderReportXlsx(
   groupId: string,
-  bizDate: string,
-  title: string
+  title: string,
+  startDate: string,
+  endDate: string
 ): Promise<Buffer> {
-  const { count, totalRevenue, orders } = OrderRepository.summarize(groupId, bizDate);
+  const { count, totalRevenue, orders } = OrderRepository.summarizeRange(
+    groupId,
+    startDate,
+    endDate
+  );
+  const periode = startDate === endDate ? startDate : `${startDate} s/d ${endDate}`;
+  const rataRata = count > 0 ? Math.round(totalRevenue / count) : 0;
 
-  return new Promise<Buffer>((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'A4', margin: PDF_MARGIN, bufferPages: true });
-      const chunks: Buffer[] = [];
-      doc.on('data', (c: Buffer) => chunks.push(c));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'WA Rental Bot';
+  wb.created = new Date();
 
-      const pageW = doc.page.width;
-      const pageH = doc.page.height;
-      const contentW = pageW - PDF_MARGIN * 2;
-      const colW = (contentW - COL_GAP) / 2;
+  // ===== Sheet 1: Detail Order =====
+  const detail = wb.addWorksheet('Detail Order', {
+    views: [{ state: 'frozen', ySplit: 5 }],
+  });
 
-      const drawHeader = (): number => {
-        doc.fillColor('#1F3864').font('Helvetica-Bold').fontSize(16)
-          .text(title, PDF_MARGIN, PDF_MARGIN);
-        doc.fillColor('#666666').font('Helvetica').fontSize(9)
-          .text(
-            `Tanggal: ${bizDate}   •   Dicetak: ${formatScheduleTime()}`,
-            PDF_MARGIN,
-            PDF_MARGIN + 22
-          );
+  detail.columns = [
+    { width: 6 }, // No
+    { width: 14 }, // Tanggal
+    { width: 34 }, // Produk
+    { width: 16 }, // Nominal
+    { width: 10 }, // Sumber
+    { width: 20 }, // Pembeli
+    { width: 20 }, // Admin
+  ];
 
-        const boxY = PDF_MARGIN + 42;
-        doc.roundedRect(PDF_MARGIN, boxY, contentW, 40, 8).fillAndStroke('#F2F5FB', '#D6DEEE');
-        doc.fillColor('#333333').font('Helvetica-Bold').fontSize(10)
-          .text(`Total Order: ${count}`, PDF_MARGIN + 14, boxY + 9);
-        doc.text(`Total Revenue: ${formatRupiah(totalRevenue)}`, PDF_MARGIN + 14, boxY + 23);
-        return boxY + 56;
-      };
+  const titleRow = detail.addRow([title]);
+  detail.mergeCells(titleRow.number, 1, titleRow.number, 7);
+  titleRow.getCell(1).font = { bold: true, size: 14, color: { argb: 'FF1F3864' } };
+  titleRow.height = 22;
 
-      const drawRow = (o: OrderRecord, globalIndex: number, x: number, y: number): void => {
-        const amountStr = formatRupiah(o.amount);
-        doc.font('Helvetica-Bold').fontSize(9);
-        const amountW = doc.widthOfString(amountStr);
+  const periodRow = detail.addRow([`Periode: ${periode}   •   Dicetak: ${formatScheduleTime()}`]);
+  detail.mergeCells(periodRow.number, 1, periodRow.number, 7);
+  periodRow.getCell(1).font = { size: 10, color: { argb: 'FF666666' } };
 
-        doc.roundedRect(x, y, colW, ROW_H - 6, 6).fill('#FAFBFD');
+  const summaryRow = detail.addRow([
+    `Total Order: ${count}`,
+    null,
+    null,
+    `Total Revenue: ${formatRupiah(totalRevenue)}`,
+    null,
+    null,
+    `Rata-rata: ${formatRupiah(rataRata)}`,
+  ]);
+  detail.mergeCells(summaryRow.number, 1, summaryRow.number, 3);
+  detail.mergeCells(summaryRow.number, 4, summaryRow.number, 6);
+  summaryRow.getCell(1).font = { bold: true };
+  summaryRow.getCell(4).font = { bold: true };
+  summaryRow.getCell(7).font = { italic: true, color: { argb: 'FF666666' } };
 
-        doc.fillColor('#2E5496').font('Helvetica-Bold').fontSize(9)
-          .text(String(globalIndex + 1), x + 8, y + 8, { width: 22 });
+  detail.addRow([]); // baris kosong
 
-        const prod = o.product?.trim() || 'Tanpa keterangan';
-        const maxProdW = Math.max(40, colW - 30 - amountW - 14);
-        doc.fillColor('#222222').font('Helvetica').fontSize(9)
-          .text(prod, x + 30, y + 8, { width: maxProdW, height: 12, ellipsis: true });
+  const headerRow = detail.addRow(['No', 'Tanggal', 'Produk', 'Nominal', 'Sumber', 'Pembeli', 'Admin']);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5496' } };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 18;
 
-        doc.fillColor('#0B6B3A').font('Helvetica-Bold').fontSize(9)
-          .text(amountStr, x + colW - amountW - 8, y + 8, { width: amountW, align: 'right' });
-      };
-
-      let startY = drawHeader();
-      const totalPages = Math.max(1, Math.ceil(orders.length / ROWS_PER_PAGE));
-
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
-          doc.addPage();
-          startY = drawHeader();
-        }
-        const slice = orders.slice(page * ROWS_PER_PAGE, page * ROWS_PER_PAGE + ROWS_PER_PAGE);
-        slice.forEach((o, i) => {
-          const col = i < ROWS_LEFT ? 0 : 1;
-          const rowInCol = col === 0 ? i : i - ROWS_LEFT;
-          const x = PDF_MARGIN + col * (colW + COL_GAP);
-          const y = startY + rowInCol * ROW_H;
-          drawRow(o, page * ROWS_PER_PAGE + i, x, y);
-        });
-      }
-
-      // Footer nomor halaman (bufferPages memungkinkan menulis ke halaman mana pun)
-      const range = doc.bufferedPageRange();
-      for (let p = range.start; p < range.start + range.count; p++) {
-        doc.switchToPage(p);
-        doc.fillColor('#999999').font('Helvetica').fontSize(8)
-          .text(
-            `Halaman ${p - range.start + 1} dari ${range.count}`,
-            PDF_MARGIN,
-            pageH - PDF_MARGIN - 20,
-            { width: contentW, align: 'center' }
-          );
-      }
-
-      doc.end();
-    } catch (error) {
-      reject(error);
+  orders.forEach((o, i) => {
+    const row = detail.addRow([
+      i + 1,
+      o.biz_date,
+      o.product?.trim() || 'Tanpa keterangan',
+      o.amount,
+      o.source === 'ocr' ? 'OCR' : 'Manual',
+      buyerLabel(o),
+      adminLabel(o),
+    ]);
+    row.getCell(4).numFmt = '"Rp"#,##0';
+    if (i % 2 === 1) {
+      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F5FB' } };
     }
   });
+
+  // Baris total di akhir tabel
+  if (orders.length > 0) {
+    const totalRow = detail.addRow([null, null, 'TOTAL', totalRevenue, null, null, null]);
+    totalRow.font = { bold: true };
+    totalRow.getCell(4).numFmt = '"Rp"#,##0';
+    totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F5' } };
+  }
+
+  // ===== Sheet 2: Ringkasan Harian =====
+  const daily = wb.addWorksheet('Ringkasan Harian');
+  daily.columns = [
+    { header: 'Tanggal', key: 'tanggal', width: 16 },
+    { header: 'Jumlah Order', key: 'jumlah', width: 14 },
+    { header: 'Total Revenue', key: 'total', width: 20 },
+  ];
+  daily.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  daily.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E5496' } };
+
+  const perDay = new Map<string, { count: number; total: number }>();
+  for (const o of orders) {
+    const cur = perDay.get(o.biz_date) ?? { count: 0, total: 0 };
+    cur.count += 1;
+    cur.total += o.amount || 0;
+    perDay.set(o.biz_date, cur);
+  }
+
+  [...perDay.keys()]
+    .sort()
+    .forEach((tanggal) => {
+      const d = perDay.get(tanggal)!;
+      const row = daily.addRow({ tanggal, jumlah: d.count, total: d.total });
+      row.getCell(3).numFmt = '"Rp"#,##0';
+    });
+
+  if (orders.length > 0) {
+    const grand = daily.addRow({ tanggal: 'TOTAL', jumlah: count, total: totalRevenue });
+    grand.font = { bold: true };
+    grand.getCell(3).numFmt = '"Rp"#,##0';
+    grand.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F5' } };
+  }
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
 }
