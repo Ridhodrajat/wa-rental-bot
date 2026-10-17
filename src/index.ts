@@ -5,6 +5,7 @@ import { startWhatsApp } from './connection/whatsapp';
 import { RentalService } from './services/rentalService';
 import { RentalNotificationService } from './services/rentalNotificationService';
 import { BackupService } from './services/backupService';
+import { StoreScheduleService } from './services/storeScheduleService';
 import logger from './utils/logger';
 
 /**
@@ -63,6 +64,12 @@ async function main(): Promise<void> {
   setInterval(() => {
     void runRentalHousekeeping();
   }, schedulerIntervalMs);
+
+  // Scheduler jadwal buka/tutup grup otomatis (autoopen/autoclose)
+  // Dicek setiap menit agar tepat pada jam yang diatur (HH:MM).
+  setInterval(() => {
+    void StoreScheduleService.run();
+  }, 60 * 1000);
 
   // Jalankan pemeriksaan awal saat startup
   await runRentalHousekeeping();

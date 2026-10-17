@@ -135,6 +135,25 @@ export function formatBusinessDate(dateOrIso: Date | string | number = new Date(
   }
 }
 
+/**
+ * Jam:menit (HH:MM, format 24 jam) pada zona waktu operasional.
+ * Dipakai untuk mencocokkan jadwal autoopen/autoclose.
+ */
+export function formatScheduleTime(dateOrIso: Date | string | number = new Date()): string {
+  const date = new Date(dateOrIso);
+  if (isNaN(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: config.timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(date);
+  } catch {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+}
+
 export function formatToTimezone(
   dateOrIso: Date | string | number,
   timeZone: string = config.timezone

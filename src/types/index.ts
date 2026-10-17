@@ -79,6 +79,22 @@ export interface GroupSettingsRecord {
   catalog_header: string | null; // Header manual
   catalog_footer: string | null; // Footer manual
   dataorder_enabled: number; // 0 or 1, laporan order otomatis saat close
+  autoopen_enabled: number; // 0 or 1
+  autoopen_time: string | null; // HH:MM (zona tampilan)
+  autoclose_enabled: number; // 0 or 1
+  autoclose_time: string | null; // HH:MM (zona tampilan)
+  autoopen_last: string | null; // tanggal operasional terakhir autoopen dijalankan
+  autoclose_last: string | null; // tanggal operasional terakhir autoclose dijalankan
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlacklistRecord {
+  id: number;
+  group_id: string;
+  number: string; // nomor tanpa karakter non-digit
+  reason: string | null;
+  added_by: string | null;
   created_at: string;
   updated_at: string;
 }

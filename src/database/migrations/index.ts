@@ -257,6 +257,41 @@ const migrations: Migration[] = [
       }
     },
   },
+  {
+    id: 4,
+    name: 'blacklist_and_auto_schedule',
+    up: (db) => {
+      // Tabel blacklist per grup (penyimpanan permanen)
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS blacklist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_id TEXT NOT NULL,
+          number TEXT NOT NULL,
+          reason TEXT,
+          added_by TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE(group_id, number),
+          FOREIGN KEY (group_id) REFERENCES groups(group_id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_blacklist_group ON blacklist(group_id);
+      `);
+
+      // Kolom pengaturan jadwal buka/tutup otomatis
+      const addCol = (col: string, def: string): void => {
+        const cols = db.prepare('PRAGMA table_info(group_settings)').all() as { name: string }[];
+        if (!cols.some((c) => c.name === col)) {
+          db.exec(`ALTER TABLE group_settings ADD COLUMN ${col} ${def}`);
+        }
+      };
+      addCol('autoopen_enabled', 'INTEGER NOT NULL DEFAULT 0');
+      addCol('autoopen_time', 'TEXT');
+      addCol('autoclose_enabled', 'INTEGER NOT NULL DEFAULT 0');
+      addCol('autoclose_time', 'TEXT');
+      addCol('autoopen_last', 'TEXT');
+      addCol('autoclose_last', 'TEXT');
+    },
+  },
 ];
 
 export function runMigrations(db: DatabaseSync): void {

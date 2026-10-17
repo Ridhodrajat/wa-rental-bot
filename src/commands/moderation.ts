@@ -1,10 +1,7 @@
 import { CommandContext, ReplyFn } from '../types';
-import { ModerationRepository, TransactionTemplateRepository, GroupSettingsRepository } from '../database/repositories/settingsRepository';
+import { ModerationRepository } from '../database/repositories/settingsRepository';
 import { getSocket, getGroupMetadata } from '../connection/whatsapp';
-import { getDefaultTemplate } from '../templates/messageTemplates';
-import { resolveTemplate } from '../utils/placeholder';
-import { buildDailyOrderReport, todayBizDate } from './storeSchedule';
-import logger from '../utils/logger';
+import { openGroupWithTemplate, closeGroupWithTemplate } from '../services/storeScheduleService';
 
 /**
  * Commands moderasi grup (antiwame, antilink, open, close, hidetag, add, kick, promote, demote, linkgc, resetlinkgc).
@@ -75,19 +72,8 @@ export async function handleOpen(ctx: CommandContext, reply: ReplyFn): Promise<v
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
 
-  const sock = getSocket();
   try {
-    await sock.groupSettingUpdate(ctx.chatJid, 'not_announcement');
-
-    // Kirim pesan template open
-    const tx = TransactionTemplateRepository.get(ctx.chatJid);
-    const template = tx?.open_template ?? getDefaultTemplate('open');
-    const { text, mentions } = resolveTemplate(template, {
-      user: ctx.senderNumber,
-      userJid: ctx.senderJid,
-      groupName: ctx.groupName ?? 'Grup',
-    });
-    await sock.sendMessage(ctx.chatJid, { text, mentions });
+    await openGroupWithTemplate(ctx.chatJid);
   } catch (error) {
     await reply('❌ Gagal membuka grup. Pastikan bot adalah admin.');
   }
@@ -98,29 +84,8 @@ export async function handleClose(ctx: CommandContext, reply: ReplyFn): Promise<
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup terlebih dahulu.');
 
-  const sock = getSocket();
   try {
-    await sock.groupSettingUpdate(ctx.chatJid, 'announcement');
-
-    // Kirim pesan template close
-    const tx = TransactionTemplateRepository.get(ctx.chatJid);
-    const template = tx?.close_template ?? getDefaultTemplate('close');
-    const { text, mentions } = resolveTemplate(template, {
-      user: ctx.senderNumber,
-      userJid: ctx.senderJid,
-      groupName: ctx.groupName ?? 'Grup',
-    });
-    await sock.sendMessage(ctx.chatJid, { text, mentions });
-
-    // Kirim ringkasan order otomatis bila diaktifkan
-    if (GroupSettingsRepository.isDataOrderEnabled(ctx.chatJid)) {
-      try {
-        const report = buildDailyOrderReport(ctx.chatJid, todayBizDate(), 'Laporan Order Hari Ini');
-        await sock.sendMessage(ctx.chatJid, { text: report });
-      } catch (reportError) {
-        logger.error({ error: reportError }, 'Gagal mengirim laporan order saat close');
-      }
-    }
+    await closeGroupWithTemplate(ctx.chatJid);
   } catch (error) {
     await reply('❌ Gagal menutup grup. Pastikan bot adalah admin.');
   }
