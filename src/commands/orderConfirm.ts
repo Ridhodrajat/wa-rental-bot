@@ -45,10 +45,7 @@ export async function maybeConfirmPendingOrder(
       return false; // bukan konfirmasi/nominal -> biarkan alur normal
     }
     const parsed = parseAmountToNumber(compact);
-    if (parsed == null) return false;
-    // Tanpa suffix (k/rb/jt), anggap nominal hanya bila >= 1000
-    const hasSuffix = /(k|rb|ribu|jt|juta)$/i.test(compact);
-    if (!hasSuffix && parsed < 1000) return false;
+    if (parsed == null || parsed <= 0) return false;
     amount = parsed;
   }
 

@@ -4,6 +4,7 @@ import { runMigrations } from '../src/database/migrations';
 import { GroupRepository } from '../src/database/repositories/groupRepository';
 import { OrderRepository } from '../src/database/repositories/orderRepository';
 import { parseAmountToNumber, extractAmountFromText, formatRupiah } from '../src/utils/amount';
+import { splitProductAndAmount, isAmountToken } from '../src/utils/orderArgs';
 import { formatBusinessDate } from '../src/utils/time';
 
 describe('Parsing nominal rupiah', () => {
@@ -36,6 +37,28 @@ describe('Parsing nominal rupiah', () => {
   test('Format tampilan rupiah', () => {
     expect(formatRupiah(50000)).toBe('Rp50.000');
     expect(formatRupiah(0)).toBe('Rp0');
+  });
+});
+
+describe('Pemisahan produk & nominal (.done)', () => {
+  test('Nominal kecil (di bawah 1000) tetap terbaca', () => {
+    expect(isAmountToken('250')).toBe(true);
+    expect(splitProductAndAmount('250')).toEqual({ product: '', amount: 250 });
+  });
+
+  test('Nama produk berangka tidak salah dianggap nominal', () => {
+    expect(isAmountToken('1b')).toBe(false);
+    expect(isAmountToken('2u')).toBe(false);
+    expect(splitProductAndAmount('netflix 2u')).toEqual({ product: 'netflix 2u', amount: null });
+    expect(splitProductAndAmount('canva 1b 250')).toEqual({ product: 'canva 1b', amount: 250 });
+  });
+
+  test('Produk + nominal', () => {
+    expect(splitProductAndAmount('Netflix 50k')).toEqual({ product: 'Netflix', amount: 50000 });
+    expect(splitProductAndAmount('netflix semi private 1b 17000')).toEqual({
+      product: 'netflix semi private 1b',
+      amount: 17000,
+    });
   });
 });
 
