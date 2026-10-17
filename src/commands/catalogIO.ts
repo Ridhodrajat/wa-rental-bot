@@ -1,7 +1,7 @@
 import { CommandContext, ReplyFn } from '../types';
 import { CatalogExportImportService } from '../services/catalogExportImportService';
 import { getSocket } from '../connection/whatsapp';
-import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import { downloadMediaMessage, normalizeMessageContent } from '@whiskeysockets/baileys';
 import path from 'path';
 import fs from 'fs';
 import logger from '../utils/logger';
@@ -75,6 +75,66 @@ export async function handleExportList(ctx: CommandContext, reply: ReplyFn): Pro
   }
 }
 
+const SUPPORTED_EXT = ['.xlsx', '.xls', '.txt', '.csv'];
+
+/**
+ * Tentukan ekstensi file dari nama file, mimetype, atau isi buffer (magic bytes).
+ */
+function resolveExtension(fileName?: string | null, mimetype?: string | null, buffer?: Buffer): string {
+  const fromName = fileName ? path.extname(fileName).toLowerCase() : '';
+  if (SUPPORTED_EXT.includes(fromName)) return fromName;
+
+  const mt = (mimetype || '').toLowerCase();
+  if (mt.includes('spreadsheetml') || mt.includes('sheet')) return '.xlsx';
+  if (mt.includes('ms-excel') || mt.includes('excel')) return '.xls';
+  if (mt.includes('csv')) return '.csv';
+  if (mt.includes('text/plain')) return '.txt';
+
+  // Tebak dari isi file: .xlsx/.xls adalah arsip ZIP (mulai dengan "PK")
+  if (buffer && buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b) return '.xlsx';
+  // .xls lama berbentuk OLE2 (mulai dengan D0 CF 11 E0)
+  if (buffer && buffer.length >= 4 && buffer[0] === 0xd0 && buffer[1] === 0xcf) return '.xls';
+
+  return fromName;
+}
+
+/**
+ * Ambil documentMessage dari konten pesan (langsung atau yang di-reply),
+ * dengan membuka bungkus documentWithCaptionMessage / ephemeral / viewOnce.
+ */
+function extractDocumentMessage(msg: any): {
+  document: any;
+  quoted: any;
+  targetMessage: any;
+} | null {
+  const directContent: any = normalizeMessageContent(msg?.message);
+  const quotedRaw: any = msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  const quotedContent: any = normalizeMessageContent(quotedRaw);
+
+  const directDoc = directContent?.documentMessage;
+  const quotedDoc = quotedContent?.documentMessage;
+
+  if (directDoc) {
+    return { document: directDoc, quoted: null, targetMessage: msg };
+  }
+  if (quotedDoc) {
+    return {
+      document: quotedDoc,
+      quoted: quotedRaw,
+      targetMessage: {
+        key: {
+          remoteJid: msg?.key?.remoteJid,
+          fromMe: false,
+          id: msg?.message?.extendedTextMessage?.contextInfo?.stanzaId,
+          participant: msg?.message?.extendedTextMessage?.contextInfo?.participant,
+        },
+        message: quotedRaw,
+      },
+    };
+  }
+  return null;
+}
+
 export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!(await requireAdmin(ctx, reply))) return;
 
@@ -82,9 +142,8 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
   const sock = getSocket();
 
   // Deteksi file dokumen: dikirim langsung (caption .importlist) atau di-reply
-  const directDoc = msg?.message?.documentMessage;
-  const quotedDoc = msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage?.documentMessage;
-  const documentMessage = directDoc || quotedDoc;
+  const found = extractDocumentMessage(msg);
+  const documentMessage = found?.document;
 
   // Kalau tidak ada file tapi ada teks berisi "|", import langsung dari teks
   const rawArgs = (ctx.fullArgs || '').trim();
@@ -114,8 +173,8 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
     await reply(
       `📥 *Cara Import Katalog:*\n\n` +
       `*Metode 1 — File:*\n` +
-      `1. Kirim file Excel (.xlsx) atau Teks (.txt) ke grup\n` +
-      `2. Beri caption *.importlist*, atau balas file itu dengan *.importlist*\n\n` +
+      `1. Kirim file Excel (.xlsx) atau Teks (.txt) ke grup (.xlsx disarankan diberi caption .importlist)\n` +
+      `2. Atau balas file itu dengan pesan *.importlist*\n\n` +
       `*Metode 2 — Teks langsung:*\n` +
       `Ketik *.importlist* diikuti isi katalog, contoh:\n` +
       `\`.importlist\`\n` +
@@ -130,29 +189,9 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
 
   let tempFilePath = '';
   try {
-    const fileName = documentMessage.fileName || 'imported_file';
-    const ext = path.extname(fileName).toLowerCase();
-
-    if (!['.xlsx', '.xls', '.txt', '.csv'].includes(ext)) {
-      await reply('❌ Format file tidak didukung. Gunakan .xlsx, .xls, .txt, atau .csv');
-      return;
-    }
-
-    // Bangun WAMessage yang berisi dokumen untuk diunduh
-    const targetMessage = directDoc
-      ? msg
-      : {
-          key: {
-            remoteJid: ctx.chatJid,
-            fromMe: false,
-            id: msg?.message?.extendedTextMessage?.contextInfo?.stanzaId,
-            participant: msg?.message?.extendedTextMessage?.contextInfo?.participant,
-          },
-          message: { documentMessage: quotedDoc },
-        };
-
+    // Unduh isi file
     const buffer = (await downloadMediaMessage(
-      targetMessage as any,
+      found!.targetMessage as any,
       'buffer',
       {},
       {
@@ -163,6 +202,21 @@ export async function handleImportList(ctx: CommandContext, reply: ReplyFn): Pro
 
     if (!buffer || buffer.length === 0) {
       await reply('❌ Gagal mengunduh file. Coba kirim ulang file-nya.');
+      return;
+    }
+
+    const ext = resolveExtension(documentMessage.fileName, documentMessage.mimetype, buffer);
+
+    logger.info(
+      { groupId: ctx.chatJid, fileName: documentMessage.fileName, mimetype: documentMessage.mimetype, ext, size: buffer.length },
+      'Import katalog: file diterima'
+    );
+
+    if (!SUPPORTED_EXT.includes(ext)) {
+      await reply(
+        '❌ Format file tidak didukung. Gunakan .xlsx, .xls, .txt, atau .csv\n\n' +
+        'Tips: kirim file .xlsx, atau balas file-nya dengan *.importlist*.'
+      );
       return;
     }
 
