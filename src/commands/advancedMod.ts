@@ -1,5 +1,6 @@
 import { CommandContext, ReplyFn } from '../types';
 import { getSocket, getGroupMetadata } from '../connection/whatsapp';
+import { BlacklistRepository, normalizeNumber } from '../database/repositories/blacklistRepository';
 import logger from '../utils/logger';
 
 /**
@@ -79,70 +80,94 @@ export async function handleAddAdmin(ctx: CommandContext, reply: ReplyFn): Promi
   }
 }
 
-// Placeholder untuk fitur blacklist (akan diimplementasikan di database nanti)
 export async function handleAddBlacklist(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  const args = ctx.fullArgs.trim().split(' ');
-  const nomor = args[0]?.replace(/[^0-9]/g, '');
-  const alasan = args.slice(1).join(' ') || 'Tidak ada alasan';
+  const args = ctx.fullArgs.trim().split(/\s+/).filter(Boolean);
+  const nomor = normalizeNumber(args[0]);
+  const alasan = args.slice(1).join(' ') || null;
 
   if (!nomor || nomor.length < 8) {
     return reply('❌ Format: *.addblacklist <nomor> [alasan]*\nContoh: *.addblacklist 628123456789 Penipu*');
   }
 
-  await reply(`✅ Nomor ${nomor} ditambahkan ke blacklist.\nAlasan: ${alasan}`);
+  const existing = BlacklistRepository.get(ctx.chatJid, nomor);
+  BlacklistRepository.add(ctx.chatJid, nomor, alasan, ctx.senderNumber);
+
+  await reply(
+    `${existing ? '♻️ Nomor diperbarui di blacklist' : '✅ Nomor ditambahkan ke blacklist'}\n` +
+      `📵 Nomor: *${nomor}*\n📝 Alasan: ${alasan ?? '-'}\n\n` +
+      `Pesan dari nomor ini akan dihapus otomatis (bila bot admin).`
+  );
 }
 
 export async function handleEditBlacklist(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  const args = ctx.fullArgs.trim().split(' ');
-  const nomor = args[0]?.replace(/[^0-9]/g, '');
+  const args = ctx.fullArgs.trim().split(/\s+/).filter(Boolean);
+  const nomor = normalizeNumber(args[0]);
   const alasan = args.slice(1).join(' ');
 
   if (!nomor || !alasan) {
-    return reply('❌ Format: *.editblacklist <nomor> <alasan baru>*');
+    return reply('❌ Format: *.editblacklist <nomor> <alasan baru>*\nContoh: *.editblacklist 628123456789 Spam*');
   }
 
-  await reply(`✅ Catatan blacklist ${nomor} diperbarui.\nAlasan baru: ${alasan}`);
+  const updated = BlacklistRepository.updateReason(ctx.chatJid, nomor, alasan);
+  if (!updated) {
+    return reply(`ℹ️ Nomor *${nomor}* belum ada di blacklist.\nTambahkan dulu dengan *.addblacklist*.`);
+  }
+
+  await reply(`✅ Catatan blacklist *${nomor}* diperbarui.\n📝 Alasan baru: ${alasan}`);
 }
 
 export async function handleDeleteBlacklist(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  const nomor = ctx.args[0]?.replace(/[^0-9]/g, '');
+  const nomor = normalizeNumber(ctx.args[0]);
   if (!nomor) {
     return reply('❌ Format: *.deleteblacklist <nomor>*');
   }
 
-  await reply(`✅ Nomor ${nomor} dihapus dari blacklist.`);
+  const removed = BlacklistRepository.remove(ctx.chatJid, nomor);
+  if (!removed) {
+    return reply(`ℹ️ Nomor *${nomor}* tidak ada di blacklist.`);
+  }
+
+  await reply(`✅ Nomor *${nomor}* dihapus dari blacklist.`);
 }
 
 export async function handleViewBlacklist(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  await reply(
-    `📋 *Daftar Blacklist Grup*\n\n` +
-    `(Fitur blacklist akan disimpan di database)\n\n` +
-    `Belum ada nomor yang diblacklist.`
-  );
+  const list = BlacklistRepository.getAll(ctx.chatJid);
+  if (list.length === 0) {
+    return reply('📋 *Daftar Blacklist Grup*\n\nBelum ada nomor yang diblacklist.');
+  }
+
+  let text = `📋 *Daftar Blacklist Grup* (${list.length})\n\n`;
+  list.forEach((b, i) => {
+    text += `${i + 1}. ${b.number}${b.reason ? ` — ${b.reason}` : ''}\n`;
+  });
+  text += `\nGunakan *.deleteblacklist <nomor>* untuk menghapus.`;
+  await reply(text);
 }
 
 export async function handleBlacklistHelp(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   await reply(
     `📚 *Panduan Blacklist*\n\n` +
-    `*.addblacklist <nomor> [alasan]*\n` +
-    `Tambah nomor ke blacklist\n\n` +
-    `*.editblacklist <nomor> <alasan>*\n` +
-    `Edit catatan blacklist\n\n` +
-    `*.deleteblacklist <nomor>*\n` +
-    `Hapus dari blacklist\n\n` +
-    `*.viewblacklist*\n` +
-    `Lihat semua blacklist`
+      `*.addblacklist <nomor> [alasan]*\n` +
+      `Tambah nomor ke blacklist (mis. penipu/spammer).\n\n` +
+      `*.editblacklist <nomor> <alasan>*\n` +
+      `Ubah catatan alasan blacklist.\n\n` +
+      `*.deleteblacklist <nomor>*\n` +
+      `Hapus nomor dari blacklist.\n\n` +
+      `*.viewblacklist*\n` +
+      `Lihat semua nomor blacklist grup.\n\n` +
+      `Catatan: pesan dari nomor blacklist akan dihapus otomatis dan pengirim ` +
+      `mendapat peringatan (perlu bot sebagai admin grup).`
   );
 }

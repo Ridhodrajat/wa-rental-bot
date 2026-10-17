@@ -8,6 +8,7 @@ import { RentalService } from '../services/rentalService';
 import { replyProduct } from '../commands/product';
 import { maybeConfirmPendingOrder } from '../commands/orderConfirm';
 import { GroupRepository } from '../database/repositories/groupRepository';
+import { BlacklistRepository } from '../database/repositories/blacklistRepository';
 import { handlePrivateMessage } from './privateChatHandler';
 import { config } from '../config/env';
 import logger from '../utils/logger';
@@ -127,6 +128,42 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       logger.error({ error, chatJid }, 'Gagal mengirim reply');
     }
   };
+
+  // ============ BLACKLIST GRUP ============
+  // Nomor yang terdaftar di blacklist grup: hapus pesan + beri peringatan.
+  // Dikecualikan untuk owner & admin grup.
+  if (isGroup && !isOwnerUser && !isAdminUser) {
+    const candidates = new Set<string>();
+    const addNum = (value?: string | null): void => {
+      const digits = (value ?? '').replace(/[^0-9]/g, '');
+      if (digits) candidates.add(digits);
+    };
+    addNum(senderNumber);
+    allSenderJids.forEach(addNum);
+    addNum(msg?.key?.participantAlt);
+    addNum(msg?.participantAlt);
+
+    if (candidates.size > 0) {
+      const blockedSet = BlacklistRepository.getNumberSet(chatJid);
+      let blocked = false;
+      for (const num of candidates) {
+        if (blockedSet.has(num)) {
+          blocked = true;
+          break;
+        }
+      }
+
+      if (blocked) {
+        try {
+          await sock.sendMessage(chatJid, { delete: msg.key });
+        } catch (error) {
+          logger.debug({ error }, 'Gagal menghapus pesan pengguna blacklist');
+        }
+        await reply('⚠️ Nomor ini terdaftar di blacklist grup. Pesan Anda dihapus.');
+        return;
+      }
+    }
+  }
 
   // Ambil info pesan yang di-reply (quoted)
   const contextInfo =

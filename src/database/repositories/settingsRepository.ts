@@ -263,6 +263,79 @@ export class GroupSettingsRepository {
     const row = this.get(groupId);
     return row?.dataorder_enabled === 1;
   }
+
+  // ===== Jadwal buka/tutup otomatis =====
+  static setAutoOpenEnabled(groupId: string, enabled: boolean): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoopen_enabled = ?, updated_at = ? WHERE group_id = ?').run(
+      enabled ? 1 : 0,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  static setAutoOpenTime(groupId: string, time: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoopen_time = ?, updated_at = ? WHERE group_id = ?').run(
+      time,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  static setAutoCloseEnabled(groupId: string, enabled: boolean): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoclose_enabled = ?, updated_at = ? WHERE group_id = ?').run(
+      enabled ? 1 : 0,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  static setAutoCloseTime(groupId: string, time: string | null): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoclose_time = ?, updated_at = ? WHERE group_id = ?').run(
+      time,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  /** Tandai autoopen sudah dijalankan pada tanggal operasional tertentu. */
+  static markAutoOpenRun(groupId: string, bizDate: string): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoopen_last = ?, updated_at = ? WHERE group_id = ?').run(
+      bizDate,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  /** Tandai autoclose sudah dijalankan pada tanggal operasional tertentu. */
+  static markAutoCloseRun(groupId: string, bizDate: string): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare('UPDATE group_settings SET autoclose_last = ?, updated_at = ? WHERE group_id = ?').run(
+      bizDate,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  /** Semua grup yang mengaktifkan autoopen atau autoclose (untuk scheduler). */
+  static getScheduleGroups(): GroupSettingsRecord[] {
+    const db = getDatabase();
+    return db
+      .prepare(
+        'SELECT * FROM group_settings WHERE autoopen_enabled = 1 OR autoclose_enabled = 1'
+      )
+      .all() as unknown as GroupSettingsRecord[];
+  }
 }
 
 // ============ Payment Config (global) ============

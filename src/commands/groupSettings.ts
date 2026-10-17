@@ -1,9 +1,11 @@
 import { CommandContext, ReplyFn } from '../types';
 import { GroupSettingsRepository } from '../database/repositories/settingsRepository';
 import { getSocket } from '../connection/whatsapp';
+import { downloadImageBuffer } from '../services/mediaService';
+import logger from '../utils/logger';
 
 /**
- * Commands pengaturan grup (setppgc, setnamegc, setdesgc, setbot, updatesetbot, delsetbot).
+ * Commands pengaturan grup (setppgc, setnamegc, setdesgc, setbot).
  */
 
 export async function handleSetPpgc(ctx: CommandContext, reply: ReplyFn): Promise<void> {
@@ -11,8 +13,20 @@ export async function handleSetPpgc(ctx: CommandContext, reply: ReplyFn): Promis
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
   if (!ctx.isBotAdmin) return reply('❌ Bot harus menjadi admin grup.');
 
-  // Cek apakah pesan mengutip gambar
-  reply('ℹ️ Untuk mengubah foto profil grup, reply gambar dengan teks *.setppgc*');
+  const buffer = await downloadImageBuffer(ctx.msg, getSocket());
+  if (!buffer) {
+    return reply(
+      '❌ Kirim/reply sebuah GAMBAR lalu ketik *.setppgc*.\nContoh: reply foto → *.setppgc*'
+    );
+  }
+
+  try {
+    await getSocket().updateProfilePicture(ctx.chatJid, buffer);
+    await reply('✅ Foto profil grup berhasil diperbarui.');
+  } catch (error) {
+    logger.error({ error }, 'Gagal mengubah foto profil grup');
+    await reply('❌ Gagal mengubah foto profil grup.');
+  }
 }
 
 export async function handleSetNamegc(ctx: CommandContext, reply: ReplyFn): Promise<void> {

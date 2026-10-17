@@ -205,16 +205,18 @@ Catatan: bot harus admin grup untuk .open dan .close.
 
 6.7 Jadwal Otomatis (Auto Open / Close) & Data Order
 
-Jadwal otomatis (masih dalam pengembangan - lihat bagian 11):
+Jadwal otomatis (SUDAH AKTIF):
   • .autoopen on|off - mengaktifkan/mematikan buka grup otomatis.
   • .autoopenset HH:MM - mengatur jam buka otomatis. Contoh: .autoopenset 08:00
   • .autoclose on|off - mengaktifkan/mematikan tutup grup otomatis.
   • .autocloseset HH:MM - mengatur jam tutup otomatis. Contoh: .autocloseset 22:00
+Cara kerja: bot memeriksa jadwal setiap menit. Saat jam cocok, grup dibuka/ditutup otomatis memakai template open/close. Setiap jadwal hanya berjalan sekali per hari. Bot harus admin grup agar jadwal dapat dijalankan.
+Melihat status: ketik .autoopen atau .autoclose tanpa argumen untuk melihat status & jam yang tersimpan.
 
 Data Order & Pendapatan (SUDAH AKTIF):
   • .dataorder on|off - bila ON, bot otomatis mengirim ringkasan order hari ini setiap kali .close.
-  • .dataordernow - menampilkan laporan order HARI INI (jumlah order + total pendapatan).
-  • .dataorderlast - menampilkan laporan order KEMARIN.
+  • .dataordernow - mengirim laporan order HARI INI sebagai FILE PDF (2 kolom, 15 order per halaman A4).
+  • .dataorderlast - mengirim laporan order KEMARIN sebagai PDF.
   • .dataorderhelp - panduan singkat data order.
   • .setnominal <angka> - mengoreksi nominal pesanan terakhir.
 
@@ -269,11 +271,11 @@ Mencatat nomor bermasalah (penipu, spammer, dsb) di grup.
   • .viewblacklist - melihat daftar blacklist grup.
   • .blacklisthelp - panduan pemakaian blacklist.
 Contoh: .addblacklist 628123456789 Penipu
-(Catatan: fitur ini masih dalam tahap pengembangan - lihat bagian 11.)
+Penyimpanan permanen (tersimpan di database) dan berlaku otomatis: pesan dari nomor blacklist akan dihapus dan pengirimnya diberi peringatan (perlu bot sebagai admin grup).
 
 6.11 Pengaturan Grup
 
-  • .setppgc - mengubah foto profil grup (reply sebuah gambar, lalu ketik .setppgc).
+  • .setppgc - mengubah foto profil grup (kirim atau reply sebuah gambar, lalu ketik .setppgc).
   • .setnamegc <nama> - mengubah nama grup.
   • .setdesgc <deskripsi> - mengubah deskripsi grup.
   • .setbot <teks> - menyimpan catatan/konfigurasi khusus grup.
@@ -317,18 +319,16 @@ Bagaimana @produk diisi: jika admin me-reply chat pelanggan lalu mengetik .prose
   • 3. Pelanggan memesan/membayar (di luar bot, sesuai kebijakan toko).
   • 4. Admin me-reply chat pelanggan lalu mengetik .p (atau .proses) untuk memberi status "diproses".
   • 5. Setelah transaksi selesai, admin me-reply chat pelanggan lalu mengetik .d 50000 (dengan nominal) ATAU .d sambil reply foto bukti transfer, agar pesanan tercatat untuk laporan pendapatan.
-  • 6. Admin bisa mengecek pendapatan kapan saja dengan .dataordernow (hari ini) atau .dataorderlast (kemarin).
+  • 6. Admin bisa mengecek pendapatan kapan saja dengan .dataordernow (hari ini, berupa PDF) atau .dataorderlast (kemarin, PDF).
   • 7. Jika toko ingin istirahat: admin mengetik .close untuk menutup grup (bila .dataorder ON, ringkasan hari ini ikut terkirim), dan .open untuk membuka kembali.
 Tips: sesuaikan template .setproses dan .setdone dengan gaya tokomu (tersedia 3 pilihan bawaan atau teks kustom).
 
 9. PESAN OTOMATIS (SCHEDULER)
 -----------------------------
 
-Bot menjalankan pemeriksaan otomatis setiap 5 menit untuk:
-  • Mengecek masa sewa setiap grup.
-  • Mengirim pengingat bila sewa grup memasuki masa tenggang (pesan "sewa akan berakhir").
-  • Mengirim pemberitahuan bila sewa grup berakhir sepenuhnya dan data dihapus.
-  • Membuat backup database otomatis.
+Bot menjalankan pemeriksaan otomatis:
+  • Setiap 5 menit: mengecek masa sewa setiap grup, mengirim pengingat bila sewa memasuki masa tenggang ("sewa akan berakhir"), memberi tahu bila sewa berakhir & data dihapus, serta membuat backup database otomatis.
+  • Setiap 1 menit: menjalankan jadwal autoopen/autoclose (buka/tutup grup otomatis) tepat pada jam HH:MM yang diatur.
 Pesan otomatis lain:
   • Welcome - dikirim saat anggota baru masuk (jika diaktifkan).
   • Goodbye - dikirim saat anggota keluar (jika diaktifkan).
@@ -348,12 +348,8 @@ Pesan otomatis lain:
 11. STATUS PENGEMBANGAN FITUR
 -----------------------------
 
-Sebagian command sudah terdaftar dan membalas, namun penyimpanan/aksinya belum sepenuhnya aktif. Mohon tidak dijadikan janji ke pelanggan sebelum diumumkan siap:
-  • Blacklist (.addblacklist, .editblacklist, .deleteblacklist, .viewblacklist) - penyimpanan permanen belum aktif.
-  • .autoopen / .autoopenset / .autoclose / .autocloseset - penjadwalan nyata belum aktif.
-  • .setppgc - belum benar-benar mengubah foto profil grup.
-  • Laporan .dataordernow/.dataorderlast berformat TEKS (belum berupa PDF).
-Fitur yang sudah berfungsi penuh antara lain: menu, sewa, katalog (tambah/ubah/rename/hapus + foto), import/export katalog, template proses/done/open/close/welcome/goodbye, open/close grup, hidetag, kick/promote/demote/add, link/reset link, deletemsg, anti-private-chat, data order & pendapatan (pencatatan otomatis + OCR bukti transfer + laporan harian), dan notifikasi sewa otomatis.
+Seluruh fitur utama sudah aktif dan berfungsi penuh: menu, sewa, katalog (tambah/ubah/rename/hapus + foto), import/export katalog, template proses/done/open/close/welcome/goodbye, open/close grup, jadwal autoopen/autoclose (buka/tutup grup otomatis), hidetag, kick/promote/demote/add, link/reset link, deletemsg, blacklist grup (penyimpanan permanen + penegakan otomatis), setppgc (ganti foto profil grup), anti-private-chat, data order & pendapatan (pencatatan otomatis + OCR bukti transfer + laporan harian PDF), dan notifikasi sewa otomatis.
+Catatan: kualitas OCR tergantung kejelasan foto bukti transfer. Bila gagal terbaca, admin cukup mengetik nominal secara manual (mis. .d 50000).
 
 12. CATATAN KEAMANAN
 --------------------
