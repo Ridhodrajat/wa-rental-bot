@@ -126,9 +126,10 @@ register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnl
 register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings' });
 register({ name: 'autocloseset', handler: scheduleCmd.handleAutoCloseSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam tutup otomatis', category: 'settings' });
 register({ name: 'dataorder', handler: scheduleCmd.handleDataOrder, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order otomatis on/off', category: 'settings' });
-register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan hari ini (PDF)', category: 'settings' });
-register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan kemarin (PDF)', category: 'settings' });
+register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order hari ini', category: 'settings' });
+register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order kemarin', category: 'settings' });
 register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
+register({ name: 'setnominal', handler: scheduleCmd.handleSetNominal, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Koreksi nominal order terakhir', category: 'settings' });
 
 // ============ Group Settings ============
 register({ name: 'setppgc', handler: settingsCmd.handleSetPpgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah foto profil grup', category: 'settings' });

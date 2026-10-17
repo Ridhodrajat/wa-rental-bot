@@ -222,6 +222,41 @@ const migrations: Migration[] = [
       ).run(now);
     },
   },
+  {
+    id: 3,
+    name: 'add_orders_and_dataorder',
+    up: (db) => {
+      // Tabel pesanan/transaksi untuk laporan pendapatan
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_id TEXT NOT NULL,
+          buyer_jid TEXT,
+          buyer_number TEXT,
+          product TEXT,
+          amount INTEGER NOT NULL DEFAULT 0,
+          source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','ocr')),
+          note TEXT,
+          admin_jid TEXT,
+          biz_date TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (group_id) REFERENCES groups(group_id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_orders_group_date ON orders(group_id, biz_date);
+        CREATE INDEX IF NOT EXISTS idx_orders_group_created ON orders(group_id, created_at);
+      `);
+
+      // Toggle laporan order otomatis pada group_settings
+      const gsCols = db
+        .prepare('PRAGMA table_info(group_settings)')
+        .all() as { name: string }[];
+      if (!gsCols.some((c) => c.name === 'dataorder_enabled')) {
+        db.exec(
+          `ALTER TABLE group_settings ADD COLUMN dataorder_enabled INTEGER NOT NULL DEFAULT 0`
+        );
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: DatabaseSync): void {

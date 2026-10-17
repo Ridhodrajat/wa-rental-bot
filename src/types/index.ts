@@ -78,8 +78,23 @@ export interface GroupSettingsRecord {
   catalog_template_id: number; // ID template catalog (1..5)
   catalog_header: string | null; // Header manual
   catalog_footer: string | null; // Footer manual
+  dataorder_enabled: number; // 0 or 1, laporan order otomatis saat close
   created_at: string;
   updated_at: string;
+}
+
+export interface OrderRecord {
+  id: number;
+  group_id: string;
+  buyer_jid: string | null;
+  buyer_number: string | null;
+  product: string | null;
+  amount: number; // nominal rupiah (0 bila tidak diketahui)
+  source: 'manual' | 'ocr'; // asal nominal
+  note: string | null;
+  admin_jid: string | null;
+  biz_date: string; // tanggal operasional (YYYY-MM-DD, zona tampilan)
+  created_at: string;
 }
 
 export interface AntiPrivateSettingsRecord {

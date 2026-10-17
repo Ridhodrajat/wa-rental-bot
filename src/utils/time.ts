@@ -116,6 +116,25 @@ export function formatWibTime(dateOrIso: Date | string | number = new Date()): s
   }
 }
 
+/**
+ * Tanggal operasional (YYYY-MM-DD) pada zona waktu tampilan.
+ * Dipakai untuk mengelompokkan laporan order per hari (mis. WIB).
+ */
+export function formatBusinessDate(dateOrIso: Date | string | number = new Date()): string {
+  const date = new Date(dateOrIso);
+  if (isNaN(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: config.timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toISOString().split('T')[0];
+  }
+}
+
 export function formatToTimezone(
   dateOrIso: Date | string | number,
   timeZone: string = config.timezone

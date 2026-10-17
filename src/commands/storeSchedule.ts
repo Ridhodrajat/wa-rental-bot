@@ -1,7 +1,10 @@
 import { CommandContext, ReplyFn } from '../types';
 import { getSocket, getGroupMetadata } from '../connection/whatsapp';
-import { TransactionTemplateRepository } from '../database/repositories/settingsRepository';
+import { TransactionTemplateRepository, GroupSettingsRepository } from '../database/repositories/settingsRepository';
+import { OrderRepository } from '../database/repositories/orderRepository';
 import { getDefaultTemplate } from '../templates/messageTemplates';
+import { formatBusinessDate } from '../utils/time';
+import { formatRupiah, parseAmountToNumber } from '../utils/amount';
 import logger from '../utils/logger';
 
 /**
@@ -116,47 +119,106 @@ export async function handleDataOrder(ctx: CommandContext, reply: ReplyFn): Prom
   if (!(await requireAdmin(ctx, reply))) return;
 
   const arg = ctx.args[0]?.toLowerCase();
-  if (arg === 'on') {
-    await reply('✅ Laporan data order otomatis saat close diaktifkan.');
-  } else if (arg === 'off') {
-    await reply('✅ Laporan data order otomatis dimatikan.');
-  } else {
-    await reply('❌ Format: *.dataorder on* atau *.dataorder off*');
+  if (arg === 'on' || arg === 'off') {
+    const enabled = arg === 'on';
+    GroupSettingsRepository.setDataOrderEnabled(ctx.chatJid, enabled);
+    await reply(
+      `✅ Laporan data order otomatis saat *.close* ${enabled ? 'diaktifkan 🟢' : 'dimatikan 🔴'}.`
+    );
+    return;
   }
+
+  const current = GroupSettingsRepository.isDataOrderEnabled(ctx.chatJid);
+  await reply(
+    `📊 *Laporan Data Order Otomatis*\n\n` +
+      `Status: ${current ? '🟢 ON' : '🔴 OFF'}\n\n` +
+      `Gunakan *.dataorder on* atau *.dataorder off*.\n` +
+      `Bila ON, ringkasan order hari ini dikirim otomatis setiap kali *.close*.`
+  );
+}
+
+/** Tanggal operasional hari ini (YYYY-MM-DD, zona tampilan). */
+export function todayBizDate(): string {
+  return formatBusinessDate(new Date());
+}
+
+/** Tanggal operasional kemarin (YYYY-MM-DD, zona tampilan). */
+export function yesterdayBizDate(): string {
+  return formatBusinessDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
+}
+
+/**
+ * Susun teks laporan order untuk sebuah grup & tanggal.
+ */
+export function buildDailyOrderReport(groupId: string, bizDate: string, title: string): string {
+  const { count, totalRevenue, orders } = OrderRepository.summarize(groupId, bizDate);
+
+  let text = `📊 *${title}*\n🗓️ ${bizDate}\n\n`;
+  text += `🧾 Total Order    : *${count}*\n`;
+  text += `💰 Total Revenue  : *${formatRupiah(totalRevenue)}*\n`;
+
+  if (orders.length > 0) {
+    text += `\n*Rincian (${orders.length}):*\n`;
+    for (const o of orders.slice(-20)) {
+      const prod = o.product?.trim() || 'Tanpa keterangan';
+      const via = o.source === 'ocr' ? ' 🤖' : '';
+      text += `• ${prod} — ${formatRupiah(o.amount)}${via}\n`;
+    }
+    if (orders.length > 20) {
+      text += `… dan ${orders.length - 20} order lainnya.\n`;
+    }
+  } else {
+    text += `\n_(belum ada order tercatat)_\n`;
+  }
+
+  return text;
 }
 
 export async function handleDataOrderNow(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  await reply(
-    `📊 *Laporan Pesanan Hari Ini*\n\n` +
-    `(Fitur laporan PDF sedang dikembangkan)\n\n` +
-    `Total Order: 0\n` +
-    `Total Revenue: Rp0`
-  );
+  const report = buildDailyOrderReport(ctx.chatJid, todayBizDate(), 'Laporan Order Hari Ini');
+  await reply(report);
 }
 
 export async function handleDataOrderLast(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isGroup) return reply('❌ Perintah ini hanya bisa digunakan di grup.');
   if (!ctx.isAdmin && !ctx.isOwner) return reply('❌ Khusus admin grup.');
 
-  await reply(
-    `📊 *Laporan Pesanan Kemarin*\n\n` +
-    `(Fitur laporan PDF sedang dikembangkan)\n\n` +
-    `Total Order: 0\n` +
-    `Total Revenue: Rp0`
-  );
+  const report = buildDailyOrderReport(ctx.chatJid, yesterdayBizDate(), 'Laporan Order Kemarin');
+  await reply(report);
+}
+
+export async function handleSetNominal(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!(await requireAdmin(ctx, reply))) return;
+
+  const amount = parseAmountToNumber(ctx.args[0]);
+  if (amount == null) {
+    return reply('❌ Format: *.setnominal <angka>*\nContoh: *.setnominal 50000*');
+  }
+
+  const last = OrderRepository.getLastForGroup(ctx.chatJid);
+  if (!last) {
+    return reply('ℹ️ Belum ada order yang bisa dikoreksi.');
+  }
+
+  OrderRepository.updateAmount(last.id, amount);
+  await reply(`✅ Nominal order terakhir diperbarui menjadi *${formatRupiah(amount)}*.`);
 }
 
 export async function handleDataOrderHelp(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   await reply(
     `📚 *Panduan Data Order*\n\n` +
-    `*.dataorder on/off*\n` +
-    `Aktifkan laporan otomatis saat tutup grup\n\n` +
-    `*.dataordernow*\n` +
-    `Download laporan hari ini (PDF)\n\n` +
-    `*.dataorderlast*\n` +
-    `Download laporan kemarin (PDF)`
+      `*.dataorder on|off*\n` +
+      `Aktifkan laporan otomatis saat grup ditutup (.close).\n\n` +
+      `*.dataordernow*\n` +
+      `Laporan order hari ini (jumlah + total pendapatan).\n\n` +
+      `*.dataorderlast*\n` +
+      `Laporan order kemarin.\n\n` +
+      `*Cara mencatat order:*\n` +
+      `• *.done 50000* — catat order Rp50.000 (reply chat pembeli).\n` +
+      `• *.done Netflix 50k* — catat produk + nominal.\n` +
+      `• *.done* + reply foto bukti transfer — nominal dibaca otomatis (OCR), lalu konfirmasi.`
   );
 }

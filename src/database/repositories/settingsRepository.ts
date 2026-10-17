@@ -203,8 +203,8 @@ export class GroupSettingsRepository {
     const db = getDatabase();
     const now = nowUtc();
     db.prepare(`
-      INSERT INTO group_settings (group_id, custom_data, jeda_ms, catalog_template_id, catalog_header, catalog_footer, created_at, updated_at)
-      VALUES (?, NULL, 1500, 1, NULL, NULL, ?, ?)
+      INSERT INTO group_settings (group_id, custom_data, jeda_ms, catalog_template_id, catalog_header, catalog_footer, dataorder_enabled, created_at, updated_at)
+      VALUES (?, NULL, 1500, 1, NULL, NULL, 0, ?, ?)
     `).run(groupId, now, now);
     return this.get(groupId)!;
   }
@@ -249,6 +249,19 @@ export class GroupSettingsRepository {
     db.prepare(
       'UPDATE group_settings SET catalog_footer = ?, updated_at = ? WHERE group_id = ?'
     ).run(footer, nowUtc(), groupId);
+  }
+
+  static setDataOrderEnabled(groupId: string, enabled: boolean): void {
+    this.ensure(groupId);
+    const db = getDatabase();
+    db.prepare(
+      'UPDATE group_settings SET dataorder_enabled = ?, updated_at = ? WHERE group_id = ?'
+    ).run(enabled ? 1 : 0, nowUtc(), groupId);
+  }
+
+  static isDataOrderEnabled(groupId: string): boolean {
+    const row = this.get(groupId);
+    return row?.dataorder_enabled === 1;
   }
 }
 

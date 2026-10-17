@@ -1,7 +1,14 @@
 import { CommandContext, ReplyFn } from '../types';
 import { TransactionTemplateRepository } from '../database/repositories/settingsRepository';
+import { OrderRepository } from '../database/repositories/orderRepository';
 import { MESSAGE_TEMPLATES, getDefaultTemplate, getTemplateOption, TemplateFeature } from '../templates/messageTemplates';
 import { resolveTemplate, displayNameFromJid } from '../utils/placeholder';
+import { PendingOrderService } from '../services/pendingOrderService';
+import { downloadImageBuffer } from '../services/mediaService';
+import { ocrImageText } from '../services/ocrService';
+import { getSocket } from '../connection/whatsapp';
+import { parseAmountToNumber, extractAmountFromText, formatRupiah } from '../utils/amount';
+import logger from '../utils/logger';
 
 /**
  * Commands template transaksi (proses & done) dan pesan open/close.
@@ -75,6 +82,97 @@ async function sendTransaction(
   const finalTemplate = template ?? getDefaultTemplate(feature);
   const { text, mentions } = resolveTransaction(finalTemplate, ctx);
   await reply(text, { mentions });
+}
+
+/**
+ * Cek apakah sebuah token (kata) berupa nominal rupiah yang wajar.
+ * Token dianggap nominal bila punya suffix (k/rb/jt) atau bernilai >= 1000.
+ */
+function isAmountToken(tok: string): boolean {
+  if (!tok) return false;
+  const n = parseAmountToNumber(tok);
+  if (n == null) return false;
+  if (/(k|rb|ribu|jt|juta)$/i.test(tok.replace(/rp\.?/gi, ''))) return true;
+  return n >= 1000;
+}
+
+/**
+ * Pisahkan produk & nominal dari argumen. Hanya token TERAKHIR yang
+ * dianggap nominal, sehingga nama produk yang mengandung angka tetap aman.
+ * Contoh: "Netflix 50k" -> { product: "Netflix", amount: 50000 }
+ */
+function splitProductAndAmount(fullArgs: string): { product: string; amount: number | null } {
+  const tokens = fullArgs.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return { product: '', amount: null };
+  const last = tokens[tokens.length - 1];
+  if (isAmountToken(last)) {
+    return { product: tokens.slice(0, -1).join(' '), amount: parseAmountToNumber(last) };
+  }
+  return { product: tokens.join(' '), amount: null };
+}
+
+/**
+ * Catat order saat admin memakai .done.
+ * - Nominal eksplisit (mis. .done 50k) -> simpan langsung.
+ * - Ada foto bukti transfer -> OCR nominal lalu tunggu konfirmasi admin.
+ * - Tanpa nominal & tanpa foto -> tidak mencatat (seperti perilaku lama).
+ */
+async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  const { product: productFromArgs, amount: explicitAmount } = splitProductAndAmount(ctx.fullArgs);
+  const buyerJid = ctx.quotedParticipant || undefined;
+  const buyerNumber = buyerJid ? displayNameFromJid(buyerJid) : undefined;
+  const product = productFromArgs || ctx.quotedText?.trim() || null;
+
+  // 1) Nominal eksplisit -> simpan langsung
+  if (explicitAmount != null) {
+    OrderRepository.create({
+      groupId: ctx.chatJid,
+      buyerJid: buyerJid ?? null,
+      buyerNumber: buyerNumber ?? null,
+      product,
+      amount: explicitAmount,
+      source: 'manual',
+      adminJid: ctx.senderJid,
+    });
+    await reply(
+      `🧾 Order dicatat: *${formatRupiah(explicitAmount)}*` + (product ? `\n🛍️ ${product}` : '')
+    );
+    return;
+  }
+
+  // 2) Ada foto bukti transfer -> OCR & konfirmasi
+  const imageBuffer = await downloadImageBuffer(ctx.msg, getSocket());
+  if (!imageBuffer) return;
+
+  try {
+    await reply('🔎 Membaca foto bukti transfer...');
+    const ocrText = await ocrImageText(imageBuffer);
+    const ocrAmount = extractAmountFromText(ocrText);
+
+    PendingOrderService.set({
+      groupId: ctx.chatJid,
+      adminJid: ctx.senderJid,
+      product,
+      buyerJid: buyerJid ?? null,
+      buyerNumber: buyerNumber ?? null,
+      amount: ocrAmount,
+    });
+
+    if (ocrAmount != null) {
+      await reply(
+        `🔎 Nominal terbaca: *${formatRupiah(ocrAmount)}*\n\n` +
+          `Balas *ya* untuk menyimpan, atau ketik nominal yang benar (contoh: 50000).`
+      );
+    } else {
+      await reply(
+        '⚠️ Nominal tidak terbaca dari foto.\n\n' +
+          'Ketik nominalnya (contoh: *50000*) untuk menyimpan order, atau *batal*.'
+      );
+    }
+  } catch (error) {
+    logger.error({ error }, 'Gagal memproses OCR order');
+    await reply('⚠️ Gagal membaca foto. Ketik nominal manual, contoh: *.done 50000*');
+  }
 }
 
 // ============ Proses ============
@@ -200,6 +298,11 @@ export async function handleDone(ctx: CommandContext, reply: ReplyFn): Promise<v
   // Tanpa argumen: kirim template done langsung (tag orang yang di-reply)
   const current = TransactionTemplateRepository.get(ctx.chatJid);
   await sendTransaction(ctx, reply, 'done', current?.done_template ?? null, current?.done_enabled !== 0);
+
+  // Catat order untuk laporan pendapatan (jika fitur done aktif)
+  if (current?.done_enabled !== 0) {
+    await recordDoneOrder(ctx, reply);
+  }
 }
 
 export async function handleSetDone(ctx: CommandContext, reply: ReplyFn): Promise<void> {

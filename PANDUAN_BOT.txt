@@ -1,0 +1,354 @@
+
+PANDUAN LENGKAP - WA RENTAL BOT
+===============================
+
+Nama Bot  : WA Rental Bot
+Versi     : 1.0.0
+Platform  : WhatsApp (multi-grup, berbasis Baileys)
+Dibuat    : untuk pemilik & pengelola grup
+================================================================
+Dokumen ini menjelaskan: cara memakai bot, seluruh command, cara order/sewa, alur jual-beli, pesan otomatis, dan tips perawatan.
+
+DAFTAR ISI
+----------
+
+1.  Tentang Bot
+2.  Cara Order / Sewa Bot
+3.  Memulai untuk Admin Grup
+4.  Hak Akses Pengguna
+5.  Cara Menulis Command
+6.  Daftar Command Lengkap
+7.  Placeholder Template
+8.  Contoh Alur Jual-Beli
+9.  Pesan Otomatis (Scheduler)
+10. Troubleshooting untuk Admin
+11. Status Pengembangan Fitur
+12. Catatan Keamanan
+
+1. TENTANG BOT
+--------------
+
+WA Rental Bot adalah bot WhatsApp yang dapat dipakai di banyak grup sekaligus. Setiap grup memiliki data yang terpisah: katalog produk, template pesan, pengaturan moderasi, dan status sewa masing-masing.
+  • Sistem sewa (rental): grup hanya bisa memakai bot selama masa sewa masih aktif. Sewa diperpanjang secara kumulatif (sisa waktu tidak hilang).
+  • Masa tenggang (grace period): 30 hari setelah sewa habis. Selama masa tenggang, grup masih aktif dan bot mengirim pengingat otomatis.
+  • Setelah masa tenggang berakhir, data grup (katalog, template, pengaturan) dihapus otomatis oleh sistem.
+  • Semua operasi dilakukan lewat WhatsApp - tidak ada tampilan web.
+  • Bot mendukung foto produk, import/export katalog, moderasi (antilink/antiwame), jam buka-tutup otomatis, dan laporan.
+  • Bot juga memiliki fitur anti-private-chat: nomor bot tidak melayani chat pribadi (DM). Siapa pun yang mengirim DM akan menerima peringatan otomatis dan diminta menghubungi owner.
+
+2. CARA ORDER / SEWA BOT
+------------------------
+
+Sewa/order dilakukan melalui Owner bot. Pelanggan tidak melakukan pembayaran lewat bot - pembayaran diatur langsung dengan owner.
+
+2.1 Untuk Calon Pelanggan (Penyewa)
+
+  • Hubungi Owner bot (ketik command .owner di grup untuk melihat kontak, atau minta nomor owner langsung).
+  • Sampaikan bahwa kamu ingin menyewa bot untuk grup WhatsApp-mu.
+  • Sepakati harga dan durasi dengan owner (harga ditentukan owner, tidak diatur di dalam bot).
+  • Lakukan pembayaran sesuai kesepakatan.
+  • Minta owner mengaktifkan sewa grup kamu dengan perintah .addsewa.
+  • Setelah aktif, undang nomor bot ke grup kamu dan jadikan bot sebagai ADMIN grup.
+  • Bot siap dipakai. Gunakan .ceksewa untuk memastikan masa aktif berjalan.
+
+2.2 Untuk Owner (Mengaktifkan Sewa)
+
+Owner mengaktifkan sewa dengan command .addsewa. Format durasi:
+  • m = menit   -> contoh: 30m (30 menit)
+  • j = jam     -> contoh: 2j (2 jam)
+  • h = hari    -> contoh: 30h (30 hari)
+  • d = hari    -> contoh: 30d (30 hari)
+  • w = minggu  -> contoh: 4w (4 minggu)
+  • angka polos = hari -> contoh: 30 (30 hari)
+Cara pakai:
+  • Di dalam grup yang ingin disewakan:  .addsewa 30h
+  • Di chat pribadi (DM bot) dengan menyebut id grup:  .addsewa 1203630123456789@g.us 30h
+Perintah terkait (khusus owner):
+  • .ceksewa        -> cek status sewa grup tempat perintah dikirim
+  • .listsewa       -> daftar seluruh sewa yang terdaftar
+  • .delsewa        -> menonaktifkan sewa grup (data grup tidak dihapus, hanya dinonaktifkan)
+  • .addsewa        -> menambah/memperpanjang sewa
+
+2.3 Catatan Penting Sewa
+
+  • Sewa bersifat kumulatif: jika grup masih aktif lalu ditambah 30h, maka 30 hari ditambahkan ke sisa waktu yang ada.
+  • Jika sewa habis tetapi belum lewat masa tenggang, grup masih bisa dipakai (status EXPIRED_GRACE) dan bot mengirim pesan pengingat.
+  • Setelah 30 hari masa tenggang berakhir, sistem menghapus rental dan data grup secara otomatis.
+  • Bot TIDAK otomatis keluar dari grup bila diundang tanpa sewa aktif. Bot hanya memberi peringatan ke owner agar menjalankan .addsewa.
+
+3. MEMULAI UNTUK ADMIN GRUP
+---------------------------
+
+Langkah awal setelah grup kamu disewakan:
+  • 1. Undang nomor bot ke grup.
+  • 2. Jadikan bot sebagai ADMIN grup (tanpa ini, fitur moderasi & pengaturan grup tidak bisa dipakai).
+  • 3. Ketik .menu di grup untuk melihat daftar perintah sesuai hak akses.
+  • 4. Susun katalog produk (lihat bagian 6.2).
+  • 5. Atur template pesan (proses, selesai, welcome, goodbye - lihat bagian 6.4 & 6.6).
+  • 6. Aktifkan moderasi bila perlu (antilink / antiwame - bagian 6.7).
+  • 7. Uji: ketik .list untuk melihat katalog, dan ketik nama produk untuk melihat detailnya.
+
+4. HAK AKSES PENGGUNA
+---------------------
+
+Bot membedakan 3 tingkat akses:
+  • Owner       -> pemilik bot. Bisa menjalankan SEMUA command, termasuk sewa dan pengaturan global.
+  • Admin Grup  -> admin grup WhatsApp. Bisa mengelola katalog, template, moderasi, dan pengaturan grup.
+  • Anggota     -> anggota biasa. Hanya bisa memakai perintah umum (.menu, .list, ketik nama produk, .afk, .owner, .status, .bot).
+Catatan:
+  • Command bertanda "owner" hanya untuk Owner.
+  • Command bertanda "admin" bisa dipakai Admin Grup ATAU Owner.
+  • Untuk command yang mengubah/mengelola grup (kick, promote, open/close, dll), BOT harus sudah menjadi admin grup.
+
+5. CARA MENULIS COMMAND
+-----------------------
+
+  • Prefix default adalah titik ( . ). Contoh: .menu
+  • Command juga bisa ditulis TANPA prefix bila kata pertama cocok dengan nama command. Contoh: menu, list
+  • Penulisan tidak peka huruf besar/kecil. Contoh: LIST sama dengan list.
+  • Untuk produk, pemisah antara nama dan deskripsi bisa memakai tanda "|" atau "@".
+Contoh: .addlist netflix|Netflix Premium 1 Bulan - Rp50.000
+  • Banyak command mendukung balasan (reply) ke pesan. Contoh: reply pesan pelanggan lalu ketik .proses.
+  • Beberapa command memakai mention/tag. Contoh: .kick @user
+
+6. DAFTAR COMMAND LENGKAP
+-------------------------
+
+
+6.1 Owner & Info
+
+  • .menu atau .cekmenu - menampilkan menu bot sesuai role pengguna.
+  • .owner - menampilkan kontak owner (nama & nomor WhatsApp).
+  • .ceksewa - mengecek status sewa grup (status, kedaluwarsa, sisa waktu).
+  • .bot - info bot: nama, versi, uptime, environment, prefix, dan kontak owner.
+  • .status - status teknis bot: koneksi, kecepatan (latency), dan jumlah pesanan hari ini.
+  • .addsewa <durasi> - (Owner) menambah/memperpanjang sewa grup.
+  • .delsewa - (Owner) menonaktifkan sewa grup.
+  • .listsewa - (Owner) daftar seluruh sewa.
+  • .setowner <nomor> - (Owner) menyimpan nomor owner tambahan/override (perlu restart bot).
+Anti-private-chat (Owner):
+  • .antiprivate on|off - mengaktifkan/mematikan perlindungan DM.
+  • .setprivatelimit <angka> - batas jumlah bubble pesan DM sebelum ditandai (contoh: 5).
+  • .autoblock on|off - auto-tandai pengirim DM yang melebihi batas (blocklist INTERNAL bot, bukan blokir WhatsApp).
+  • .cekantiprivate - melihat status anti-private-chat dan daftar pengirim.
+
+6.2 Katalog Produk
+
+Mengelola daftar produk yang dijual di grup.
+  • .list - menampilkan katalog produk grup (juga dipakai untuk melihat menu jualan).
+  • .addlist <nama>|<deskripsi> - menambah produk baru.
+  • .addlist <nama>|<deskripsi> dengan FOTO - kirim foto dengan caption .addlist nama|deskripsi, ATAU reply sebuah foto dengan .addlist nama|deskripsi.
+  • .updatelist <nama>|<deskripsi_baru> - mengubah deskripsi produk.
+  • .updatelist <nama> (reply foto) - mengganti foto produk tanpa mengubah deskripsi.
+  • .renamelist <nama_lama>|<nama_baru> - mengganti nama produk.
+  • .dellist <nama> - menghapus produk (beserta fotonya).
+  • Pencarian otomatis: cukup ketik nama produk di grup (contoh: netflix), bot akan membalas deskripsi + foto produk tersebut.
+Contoh:
+  • .addlist youtube|YouTube Premium 1 Bulan - Rp50.000
+  • .renamelist youtube|yt premium
+  • .dellist yt premium
+
+6.3 Template Katalog (tampilan .list)
+
+  • .setlisttemplate - menampilkan daftar pilihan template katalog.
+  • .setlisttemplate <nomor> - memilih template katalog (1-5). Contoh: .setlisttemplate 2
+  • .previewlist - melihat pratinjau tampilan katalog.
+  • .setlistheader <teks> - mengatur header katalog secara manual.
+  • .setlistfooter <teks> - mengatur footer katalog secara manual.
+  • .resetlisttemplate - mengembalikan template katalog ke bawaan.
+Pilihan template katalog: 1) Hhi-Haloow  2) Soft Pink  3) Bunny Shop  4) Cloud Dream  5) Minimalist Cute
+
+6.4 Import & Export Katalog
+
+  • .exportlist - menampilkan pilihan format export.
+  • .exportlist 1 - mengirim file EXCEL (.xlsx) berisi katalog (tabel berwarna).
+  • .exportlist 2 - mengirim file TEKS (.txt) berisi katalog (format: nama_produk|deskripsi).
+  • .importlist - menampilkan panduan import.
+Mengimpor katalog (3 cara):
+  • Cara A - Kirim file .xlsx / .txt ke grup DENGAN caption .importlist.
+  • Cara B - Kirim file, lalu REPLY file tersebut dengan pesan .importlist.
+  • Cara C - Teks langsung: ketik .importlist lalu baris-baris "nama_produk|deskripsi".
+Format file:
+  • Excel (.xlsx/.xls): baris 1 sebagai header; kolom 1 = nama produk, kolom 2 = deskripsi.
+  • Teks (.txt/.csv): satu produk per baris, format nama_produk|deskripsi.
+Catatan: file hasil .exportlist langsung kompatibel untuk diimpor kembali. Produk yang sudah ada akan diperbarui, yang baru akan ditambahkan.
+
+6.5 Transaksi: Proses & Selesai
+
+Mengirim pesan status pesanan. Cocok dipakai dengan cara mereply chat pelanggan.
+  • .proses - mengirim template "sedang diproses" (tag orang yang di-reply).
+  • .done - mengirim template "selesai" (tag orang yang di-reply).
+  • .p - alias dari .proses (lebih cepat).
+  • .d - alias dari .done (lebih cepat).
+Mengatur template:
+  • .proses on|off - mengaktifkan/mematikan fitur proses.
+  • .proses list - melihat pilihan template proses.
+  • .proses preview - pratinjau template proses.
+  • .setproses <nomor|teks> - memilih template proses dari daftar atau membuatnya kustom.
+  • .changeproses <teks> - mengubah isi template proses.
+  • .delsetproses - mengembalikan template proses ke default.
+  • .done / .setdone / .changedone / .delsetdone - sama seperti di atas untuk pesan selesai.
+Pilihan template: 1) Cute Pastel  2) Soft Minimal  3) Playful Kawaii
+
+6.6 Buka & Tutup Grup (Open / Close)
+
+  • .open - membuka grup (semua anggota bisa chat) sekaligus mengirim pesan template open.
+  • .close - menutup grup (hanya admin yang bisa chat) sekaligus mengirim pesan template close.
+  • .setopen <nomor|teks> - memilih/mengatur template pesan open.
+  • .setclose <nomor|teks> - memilih/mengatur template pesan close.
+Catatan: bot harus admin grup untuk .open dan .close.
+
+6.7 Jadwal Otomatis (Auto Open / Close) & Data Order
+
+  • .autoopen on|off - mengaktifkan/mematikan buka grup otomatis.
+  • .autoopenset HH:MM - mengatur jam buka otomatis. Contoh: .autoopenset 08:00
+  • .autoclose on|off - mengaktifkan/mematikan tutup grup otomatis.
+  • .autocloseset HH:MM - mengatur jam tutup otomatis. Contoh: .autocloseset 22:00
+  • .dataorder on|off - mengaktifkan/mematikan laporan order otomatis.
+  • .dataordernow - laporan order hari ini.
+  • .dataorderlast - laporan order kemarin.
+  • .dataorderhelp - bantuan data order.
+(Catatan: fitur ini masih dalam tahap pengembangan - lihat bagian 11.)
+
+6.8 Welcome & Goodbye
+
+Pesan otomatis saat anggota masuk/keluar grup.
+  • .welcome - menampilkan status & template welcome saat ini.
+  • .welcome on|off - mengaktifkan/mematikan welcome.
+  • .welcome list - melihat pilihan template welcome.
+  • .welcome preview - pratinjau template welcome.
+  • .setwelcome <nomor|teks> - memilih/mengatur template welcome.
+  • .changewelcome <teks> - mengubah isi template welcome.
+  • .delsetwelcome - mengembalikan welcome ke default.
+  • .goodbye / .setleft / .changeleft / .delsetleft - sama seperti di atas untuk pesan perpisahan.
+Pilihan template: 1) Cute Pastel  2) Soft Minimal  3) Playful Kawaii
+
+6.9 Moderasi Grup
+
+  • .antilink - mengaktifkan Anti-link Mode 1 (peringatan + hapus pesan berisi link).
+  • .antilink2 - mengaktifkan Anti-link Mode 2 (langsung kick pengirim link).
+  • .antiwame - mengaktifkan Anti-wame Mode 1 (peringatan + hapus pesan berisi tautan wa.me).
+  • .antiwame2 - mengaktifkan Anti-wame Mode 2 (langsung kick).
+  • .hidetag <pesan> - menandai (tag) semua anggota tanpa menampilkan daftar panjang.
+  • .add <nomor> - menambahkan anggota ke grup. Contoh: .add 628123456789
+  • .kick @user - mengeluarkan anggota dari grup.
+  • .promote @user - menjadikan anggota sebagai admin.
+  • .demote @user - menurunkan admin menjadi anggota biasa.
+  • .addadmin @user - menjadikan anggota sebagai admin (alternatif .promote).
+  • .linkgc - mengambil tautan undangan grup.
+  • .resetlinkgc - mereset tautan undangan grup (tautan lama menjadi tidak berlaku).
+  • .revokelinkgc - sama seperti resetlinkgc (alternatif).
+  • .deletemsg - menghapus pesan; balas (reply) pesan yang ingin dihapus lalu ketik .deletemsg.
+Catatan: untuk command yang mengubah grup, bot harus admin grup.
+
+6.10 Blacklist Grup
+
+Mencatat nomor bermasalah (penipu, spammer, dsb) di grup.
+  • .addblacklist <nomor> [alasan] - menambah nomor ke blacklist.
+  • .editblacklist <nomor> <alasan> - mengubah alasan blacklist.
+  • .deleteblacklist <nomor> - menghapus nomor dari blacklist.
+  • .viewblacklist - melihat daftar blacklist grup.
+  • .blacklisthelp - panduan pemakaian blacklist.
+Contoh: .addblacklist 628123456789 Penipu
+(Catatan: fitur ini masih dalam tahap pengembangan - lihat bagian 11.)
+
+6.11 Pengaturan Grup
+
+  • .setppgc - mengubah foto profil grup (reply sebuah gambar, lalu ketik .setppgc).
+  • .setnamegc <nama> - mengubah nama grup.
+  • .setdesgc <deskripsi> - mengubah deskripsi grup.
+  • .setbot <teks> - menyimpan catatan/konfigurasi khusus grup.
+Catatan: bot harus admin grup.
+
+6.12 Utilitas
+
+  • .afk <alasan> - mengaktifkan status AFK (Away From Keyboard). Ketik pesan apa saja untuk menonaktifkan.
+  • .status - cek status teknis bot (koneksi, kecepatan, pesanan hari ini).
+  • .bot - info bot.
+  • .owner - kontak owner.
+  • .menu - menu bot.
+
+7. PLACEHOLDER TEMPLATE
+-----------------------
+
+Placeholder adalah kode yang akan diganti otomatis oleh bot saat pesan dikirim.
+Placeholder umum (proses, done, welcome, goodbye, open, close):
+  • @user        -> menandai (tag) pengguna terkait (mis. orang yang di-reply).
+  • @namagrup    -> nama grup.
+  • @admin       -> admin terkait (bila tersedia).
+  • @tanggal     -> tanggal saat ini (WIB).
+  • @jam         -> jam saat ini (WIB).
+  • @produk      -> nama/teks produk (mengikuti pesan yang di-reply).
+  • @deskripsi   -> deskripsi/teks pesan yang di-reply.
+  • @nominal     -> nominal transaksi (bila tersedia).
+  • @nomor       -> nomor/identitas transaksi (bila tersedia).
+Placeholder khusus katalog (.list):
+  • @namagrup                      -> nama grup.
+  • @namawaorangyangmengetiklist   -> menandai orang yang mengetik .list.
+  • @jam                           -> jam saat ini (WIB).
+Contoh membuat template proses kustom:
+  • .setproses Pesanan @user (@produk) sedang diproses pada @tanggal pukul @jam WIB. Mohon ditunggu ya.
+Bagaimana @produk diisi: jika admin me-reply chat pelanggan lalu mengetik .proses, maka @user menjadi pelanggan tersebut dan @produk/@deskripsi berisi teks chat yang di-reply.
+
+8. CONTOH ALUR JUAL-BELI
+------------------------
+
+  • 1. Pelanggan mengetik .list untuk melihat katalog.
+  • 2. Pelanggan mengetik nama produk (contoh: netflix) untuk melihat deskripsi & foto.
+  • 3. Pelanggan memesan/membayar (di luar bot, sesuai kebijakan toko).
+  • 4. Admin me-reply chat pelanggan lalu mengetik .p (atau .proses) untuk memberi status "diproses".
+  • 5. Setelah transaksi selesai, admin me-reply chat pelanggan lalu mengetik .d (atau .done) untuk status "selesai".
+  • 6. Jika toko ingin istirahat: admin mengetik .close untuk menutup grup, dan .open untuk membuka kembali.
+Tips: sesuaikan template .setproses dan .setdone dengan gaya tokomu (tersedia 3 pilihan bawaan atau teks kustom).
+
+9. PESAN OTOMATIS (SCHEDULER)
+-----------------------------
+
+Bot menjalankan pemeriksaan otomatis setiap 5 menit untuk:
+  • Mengecek masa sewa setiap grup.
+  • Mengirim pengingat bila sewa grup memasuki masa tenggang (pesan "sewa akan berakhir").
+  • Mengirim pemberitahuan bila sewa grup berakhir sepenuhnya dan data dihapus.
+  • Membuat backup database otomatis.
+Pesan otomatis lain:
+  • Welcome - dikirim saat anggota baru masuk (jika diaktifkan).
+  • Goodbye - dikirim saat anggota keluar (jika diaktifkan).
+  • Peringatan anti-private-chat - dikirim ke pengirim DM ke nomor bot.
+
+10. TROUBLESHOOTING UNTUK ADMIN
+-------------------------------
+
+  • Bot tidak membalas di grup -> pastikan grup sudah disewa (cek dengan .ceksewa) dan perintah dipakai sesuai hak akses. Hanya sebagian command yang tetap jalan tanpa sewa aktif (.menu, .owner, .ceksewa, .status, .bot, dll).
+  • Muncul pesan "Bot harus menjadi admin grup" -> jadikan bot sebagai admin grup terlebih dahulu.
+  • Bot tidak bisa kick/promote/ubah grup -> bot harus admin grup; bot juga tidak bisa menurunkan admin lain bila tidak diizinkan.
+  • Bot tidak merespon sama sekali -> hubungi owner untuk memeriksa koneksi/perangkat tertaut WhatsApp.
+  • Fitur moderasi (antilink/antiwame) tidak jalan -> pastikan sudah diaktifkan dan bot adalah admin grup.
+  • Katalog tidak muncul -> pastikan sudah ada produk (.addlist) lalu jalankan .list.
+  • Import katalog gagal -> pastikan format file benar (Excel: 2 kolom; Teks: nama|deskripsi) dan kamu admin/owner.
+
+11. STATUS PENGEMBANGAN FITUR
+-----------------------------
+
+Sebagian command sudah terdaftar dan membalas, namun penyimpanan/aksinya belum sepenuhnya aktif. Mohon tidak dijadikan janji ke pelanggan sebelum diumumkan siap:
+  • Blacklist (.addblacklist, .editblacklist, .deleteblacklist, .viewblacklist) - penyimpanan permanen belum aktif.
+  • .autoopen / .autoopenset / .autoclose / .autocloseset - penjadwalan nyata belum aktif.
+  • .dataorder on/off, .dataordernow, .dataorderlast - laporan PDF belum aktif.
+  • .setppgc - belum benar-benar mengubah foto profil grup.
+Fitur yang sudah berfungsi penuh antara lain: menu, sewa, katalog (tambah/ubah/rename/hapus + foto), import/export katalog, template proses/done/open/close/welcome/goodbye, open/close grup, hidetag, kick/promote/demote/add, link/reset link, deletemsg, anti-private-chat, dan notifikasi sewa otomatis.
+
+12. CATATAN KEAMANAN
+--------------------
+
+  • Jangan bagikan sesi WhatsApp (folder auth) ke siapa pun.
+  • Jangan menjalankan bot dengan sesi yang sama di dua tempat sekaligus (menyebabkan konflik/logout).
+  • Ganti nomor owner hanya melalui owner yang berwenang.
+  • Backup database secara berkala.
+  • Bot ini memakai library tidak resmi (Baileys); gunakan dengan bijak dan tanggung jawab masing-masing.
+
+PENUTUP
+-------
+
+Panduan ini dapat diperbarui seiring penambahan fitur baru.
+Untuk pertanyaan, kendala, atau perpanjangan sewa - hubungi Owner bot (ketik .owner).
+
+WA Rental Bot v1.0.0 - dibuat dengan TypeScript, Baileys, dan SQLite.
+
