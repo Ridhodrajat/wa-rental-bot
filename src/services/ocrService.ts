@@ -1,3 +1,4 @@
+import path from 'path';
 import logger from '../utils/logger';
 
 /**
@@ -20,7 +21,10 @@ async function getWorker(): Promise<any> {
     if (typeof createWorker !== 'function') {
       throw new Error('createWorker tidak ditemukan pada tesseract.js');
     }
-    const worker = await createWorker('eng');
+    // OEM.LSTM_ONLY = 1; cachePath menyimpan eng.traineddata agar tidak
+    // diunduh berulang kali (butuh internet pada pemakaian pertama).
+    const cachePath = path.resolve(process.cwd(), 'data', 'ocr');
+    const worker = await createWorker('eng', 1, { cachePath });
     logger.info('OCR worker siap (tesseract.js)');
     return worker;
   })();
