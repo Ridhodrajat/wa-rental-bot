@@ -126,8 +126,12 @@ register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnl
 register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings' });
 register({ name: 'autocloseset', handler: scheduleCmd.handleAutoCloseSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam tutup otomatis', category: 'settings' });
 register({ name: 'dataorder', handler: scheduleCmd.handleDataOrder, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order otomatis on/off', category: 'settings' });
-register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order hari ini (PDF)', category: 'settings' });
-register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order kemarin (PDF)', category: 'settings' });
+register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order hari ini (Excel)', category: 'settings' });
+register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order kemarin (Excel)', category: 'settings' });
+register({ name: 'dataorderweek', handler: scheduleCmd.handleDataOrderWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu ini (Excel)', category: 'settings' });
+register({ name: 'dataorderlastweek', handler: scheduleCmd.handleDataOrderLastWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu lalu (Excel)', category: 'settings' });
+register({ name: 'dataordermonth', handler: scheduleCmd.handleDataOrderMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan ini (Excel)', category: 'settings' });
+register({ name: 'dataorderlastmonth', handler: scheduleCmd.handleDataOrderLastMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan lalu (Excel)', category: 'settings' });
 register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
 register({ name: 'setnominal', handler: scheduleCmd.handleSetNominal, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Koreksi nominal order terakhir', category: 'settings' });
 

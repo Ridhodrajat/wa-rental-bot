@@ -6,7 +6,7 @@ import {
 import { getDefaultTemplate } from '../templates/messageTemplates';
 import { resolveTemplate } from '../utils/placeholder';
 import { formatBusinessDate, formatScheduleTime } from '../utils/time';
-import { buildDailyOrderReport, todayBizDate } from './orderReportService';
+import { buildOrderSummaryText, todayBizDate } from './orderReportService';
 import logger from '../utils/logger';
 
 /**
@@ -47,7 +47,12 @@ export async function closeGroupWithTemplate(groupId: string): Promise<void> {
 
   if (GroupSettingsRepository.isDataOrderEnabled(groupId)) {
     try {
-      const report = buildDailyOrderReport(groupId, todayBizDate(), 'Laporan Order Hari Ini');
+      const report = buildOrderSummaryText(
+        groupId,
+        todayBizDate(),
+        todayBizDate(),
+        'Laporan Order Hari Ini'
+      );
       await sock.sendMessage(groupId, { text: report });
     } catch (error) {
       logger.error({ error, groupId }, 'Gagal mengirim laporan order saat close');

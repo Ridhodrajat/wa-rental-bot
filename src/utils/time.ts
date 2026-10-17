@@ -154,6 +154,58 @@ export function formatScheduleTime(dateOrIso: Date | string | number = new Date(
   }
 }
 
+/**
+ * Helper tanggal operasional (format YYYY-MM-DD) berbasis UTC murni,
+ * agar aritmetika tanggal tidak terpengaruh zona waktu server.
+ */
+export function parseBizDate(bizDate: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(bizDate);
+  if (!m) return null;
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+}
+
+export function toBizDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function addDaysToBizDate(bizDate: string, days: number): string {
+  const d = parseBizDate(bizDate);
+  if (!d) return bizDate;
+  d.setUTCDate(d.getUTCDate() + days);
+  return toBizDate(d);
+}
+
+/** Senin pada minggu yang sama dengan bizDate. */
+export function startOfWeekBizDate(bizDate: string): string {
+  const d = parseBizDate(bizDate);
+  if (!d) return bizDate;
+  const diff = (d.getUTCDay() + 6) % 7; // Senin = 0
+  d.setUTCDate(d.getUTCDate() - diff);
+  return toBizDate(d);
+}
+
+/** Minggu pada minggu yang sama dengan bizDate. */
+export function endOfWeekBizDate(bizDate: string): string {
+  return addDaysToBizDate(startOfWeekBizDate(bizDate), 6);
+}
+
+export function startOfMonthBizDate(bizDate: string): string {
+  return `${bizDate.slice(0, 7)}-01`;
+}
+
+export function endOfMonthBizDate(bizDate: string): string {
+  const d = parseBizDate(bizDate);
+  if (!d) return bizDate;
+  return toBizDate(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+}
+
+/** Geser ke hari pertama bulan sejumlah `months` dari bizDate. */
+export function addMonthsToBizDate(bizDate: string, months: number): string {
+  const d = parseBizDate(bizDate);
+  if (!d) return bizDate;
+  return toBizDate(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1)));
+}
+
 export function formatToTimezone(
   dateOrIso: Date | string | number,
   timeZone: string = config.timezone

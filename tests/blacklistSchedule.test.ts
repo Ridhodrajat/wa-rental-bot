@@ -5,8 +5,18 @@ import { GroupRepository } from '../src/database/repositories/groupRepository';
 import { OrderRepository } from '../src/database/repositories/orderRepository';
 import { BlacklistRepository } from '../src/database/repositories/blacklistRepository';
 import { GroupSettingsRepository } from '../src/database/repositories/settingsRepository';
-import { buildOrderReportPdf } from '../src/services/orderReportService';
-import { formatScheduleTime, formatBusinessDate } from '../src/utils/time';
+import { buildOrderReportXlsx } from '../src/services/orderReportService';
+import ExcelJS from 'exceljs';
+import {
+  formatScheduleTime,
+  formatBusinessDate,
+  startOfWeekBizDate,
+  endOfWeekBizDate,
+  startOfMonthBizDate,
+  endOfMonthBizDate,
+  addDaysToBizDate,
+  addMonthsToBizDate,
+} from '../src/utils/time';
 
 describe('BlacklistRepository', () => {
   let db: DatabaseSync;
@@ -125,7 +135,7 @@ describe('Jadwal autoopen/autoclose', () => {
   });
 });
 
-describe('Laporan PDF', () => {
+describe('Laporan Excel', () => {
   let db: DatabaseSync;
   const GROUP = 'pdf-test@g.us';
 
@@ -147,20 +157,63 @@ describe('Laporan PDF', () => {
     GroupRepository.upsertGroup(GROUP, 'PDF Group');
   });
 
-  test('Menghasilkan PDF valid (2 kolom, banyak order)', async () => {
+  test('Menghasilkan XLSX valid (banyak order)', async () => {
     for (let i = 0; i < 40; i++) {
       OrderRepository.create({ groupId: GROUP, product: `Produk ${i + 1}`, amount: (i + 1) * 1000 });
     }
     const today = formatBusinessDate();
-    const buf = await buildOrderReportPdf(GROUP, today, 'Laporan Order Hari Ini');
+    const buf = await buildOrderReportXlsx(GROUP, 'Laporan Order Hari Ini', today, today);
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(1000);
-    expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
+    // File .xlsx adalah arsip ZIP -> dimulai dengan "PK".
+    expect(buf.subarray(0, 2).toString()).toBe('PK');
+
+    // Baca kembali untuk memastikan struktur & isi benar.
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as unknown as ExcelJS.Buffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual(['Detail Order', 'Ringkasan Harian']);
+    const detail = wb.worksheets[0];
+    // 40 order + 5 baris header/summary + 1 baris TOTAL.
+    expect(detail.rowCount).toBe(46);
+    const daily = wb.worksheets[1];
+    const totalRow = daily.getRow(daily.rowCount);
+    expect(totalRow.getCell(1).value).toBe('TOTAL');
+    expect(totalRow.getCell(2).value).toBe(40);
+    expect(totalRow.getCell(3).value).toBe((40 * 41 * 1000) / 2); // 1..40 ribu
   });
 
-  test('PDF tetap dihasilkan saat belum ada order', async () => {
+  test('XLSX tetap dihasilkan saat belum ada order', async () => {
     const today = formatBusinessDate();
-    const buf = await buildOrderReportPdf(GROUP, today, 'Laporan Order Hari Ini');
-    expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
+    const buf = await buildOrderReportXlsx(GROUP, 'Laporan Order Hari Ini', today, today);
+    expect(buf.subarray(0, 2).toString()).toBe('PK');
+  });
+
+  test('summarizeRange menghitung rentang tanggal', () => {
+    OrderRepository.create({ groupId: GROUP, product: 'A', amount: 10000 });
+    OrderRepository.create({ groupId: GROUP, product: 'B', amount: 5000 });
+    const today = formatBusinessDate();
+    const inRange = OrderRepository.summarizeRange(GROUP, today, today);
+    expect(inRange.count).toBe(2);
+    expect(inRange.totalRevenue).toBe(15000);
+    const outRange = OrderRepository.summarizeRange(GROUP, '2000-01-01', '2000-01-02');
+    expect(outRange.count).toBe(0);
+  });
+});
+
+describe('Helper periode (minggu/bulan)', () => {
+  test('rentang minggu (Senin–Minggu)', () => {
+    // 2026-10-17 adalah hari Sabtu.
+    expect(startOfWeekBizDate('2026-10-17')).toBe('2026-10-12');
+    expect(endOfWeekBizDate('2026-10-17')).toBe('2026-10-18');
+    expect(addDaysToBizDate('2026-10-12', -7)).toBe('2026-10-05');
+    expect(addDaysToBizDate('2026-10-12', -1)).toBe('2026-10-11');
+  });
+
+  test('rentang bulan', () => {
+    expect(startOfMonthBizDate('2026-10-17')).toBe('2026-10-01');
+    expect(endOfMonthBizDate('2026-10-17')).toBe('2026-10-31');
+    const lastMonth = addMonthsToBizDate(startOfMonthBizDate('2026-10-17'), -1);
+    expect(lastMonth).toBe('2026-09-01');
+    expect(endOfMonthBizDate(lastMonth)).toBe('2026-09-30');
   });
 });
