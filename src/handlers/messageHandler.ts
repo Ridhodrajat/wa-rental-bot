@@ -32,6 +32,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption ||
+    msg.message?.documentMessage?.caption ||
     '';
 
   // ============ PRIVATE CHAT (DM) ============
