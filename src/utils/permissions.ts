@@ -118,6 +118,101 @@ export function isOwner(senderJid: string): boolean {
 }
 
 /**
+ * Ambil representasi NOMOR TELEPON (bukan LID) dari peserta grup.
+ * WhatsApp memakai LID (identitas anonim) selain nomor asli; nomor asli
+ * biasanya ada di field `phoneNumber` atau JID @s.whatsapp.net.
+ */
+export function preferredPhoneFromParticipant(p: any): string | null {
+  if (!p) return null;
+
+  if (typeof p.phoneNumber === 'string') {
+    const n = extractJidNumber(p.phoneNumber);
+    if (n) return n;
+  }
+
+  for (const field of [p.id, p.jid]) {
+    if (typeof field === 'string' && field.includes('@') && !field.endsWith('@lid')) {
+      const n = extractJidNumber(field);
+      if (n) return n;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Peta nomor -> nomor telepon (PN) untuk seluruh peserta grup.
+ * Kunci mencakup semua varian (LID & PN) sehingga lookup dari JID/nomor apa pun
+ * bisa menghasilkan nomor telepon asli bila tersedia.
+ */
+export function buildPhoneMap(metadata: any): Map<string, string> {
+  const map = new Map<string, string>();
+  const participants = metadata?.participants;
+  if (!Array.isArray(participants)) return map;
+
+  for (const p of participants) {
+    const phone = preferredPhoneFromParticipant(p);
+    if (!phone) continue;
+    for (const field of [p.id, p.lid, p.jid, p.phoneNumber]) {
+      const n = typeof field === 'string' ? extractJidNumber(field) : '';
+      if (n) map.set(n, phone);
+    }
+  }
+  return map;
+}
+
+/**
+ * Ubah JID/nomor apa pun menjadi nomor telepon memakai peta grup.
+ * Bila tidak ada di peta, mengembalikan bagian angkanya (perilaku lama).
+ */
+export function resolvePhoneNumber(
+  jidOrNumber: string | null | undefined,
+  phoneMap?: Map<string, string> | null
+): string | null {
+  if (!jidOrNumber) return null;
+  const digits = extractJidNumber(String(jidOrNumber));
+  if (!digits) return null;
+  return phoneMap?.get(digits) ?? digits;
+}
+
+/**
+ * Pilih nomor telepon dari beberapa kandidat JID untuk satu orang.
+ * Urutan prioritas:
+ *   1) Petakan lewat peta grup (LID -> nomor asli).
+ *   2) Varian JID yang bukan LID (@s.whatsapp.net dsb).
+ *   3) Digit pertama yang ada (fallback).
+ * JID grup (@g.us) selalu diabaikan.
+ */
+export function resolvePhoneFromCandidates(
+  candidates: Array<string | null | undefined>,
+  phoneMap?: Map<string, string> | null
+): string | null {
+  const clean = candidates
+    .filter((c): c is string => typeof c === 'string' && c.length > 0)
+    .filter((c) => !c.endsWith('@g.us'));
+
+  const digits = Array.from(
+    new Set(clean.map((c) => extractJidNumber(c)).filter((d) => d.length > 0))
+  );
+
+  if (phoneMap) {
+    for (const d of digits) {
+      const mapped = phoneMap.get(d);
+      if (mapped) return mapped;
+    }
+  }
+
+  for (const c of clean) {
+    if (c.includes('@') && !c.endsWith('@lid')) {
+      const d = extractJidNumber(c);
+      if (d) return d;
+    }
+  }
+
+  return digits[0] ?? null;
+}
+
+/**
  * Cek apakah pengirim adalah admin grup.
  */
 export function isGroupAdmin(senderJid: string, groupMetadata: any): boolean {

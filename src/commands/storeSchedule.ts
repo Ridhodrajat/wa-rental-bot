@@ -1,8 +1,9 @@
 import { CommandContext, ReplyFn } from '../types';
 import { GroupSettingsRepository } from '../database/repositories/settingsRepository';
 import { OrderRepository } from '../database/repositories/orderRepository';
-import { getSocket } from '../connection/whatsapp';
+import { getSocket, getGroupMetadata } from '../connection/whatsapp';
 import { formatRupiah, parseAmountToNumber } from '../utils/amount';
+import { buildPhoneMap } from '../utils/permissions';
 import {
   todayBizDate,
   yesterdayBizDate,
@@ -179,7 +180,17 @@ async function sendOrderReport(
     `🧾 Total Order: *${count}*\n💰 Total Revenue: *${formatRupiah(totalRevenue)}*`;
 
   try {
-    const buf = await buildOrderReportXlsx(ctx.chatJid, title, startDate, endDate);
+    // Peta LID -> nomor telepon agar kolom Pembeli/Admin menampilkan nomor asli
+    // (juga memperbaiki order lama yang tersimpan sebagai LID).
+    let phoneMap: Map<string, string> | null = null;
+    try {
+      const meta = await getGroupMetadata(ctx.chatJid);
+      phoneMap = buildPhoneMap(meta);
+    } catch {
+      phoneMap = null;
+    }
+
+    const buf = await buildOrderReportXlsx(ctx.chatJid, title, startDate, endDate, phoneMap);
     const sock = getSocket();
     await sock.sendMessage(ctx.chatJid, {
       document: buf,

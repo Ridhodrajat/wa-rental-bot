@@ -3,6 +3,7 @@ import { OrderRepository } from '../database/repositories/orderRepository';
 import { OrderRecord } from '../types';
 import { formatBusinessDate, formatScheduleTime } from '../utils/time';
 import { formatRupiah } from '../utils/amount';
+import { resolvePhoneNumber } from '../utils/permissions';
 
 /**
  * Laporan order/pendapatan:
@@ -63,25 +64,25 @@ export function orderReportFileName(tag: string, startDate: string, endDate: str
   return `laporan-order-${tag}-${range}.xlsx`;
 }
 
-function buyerLabel(o: OrderRecord): string {
-  if (o.buyer_number) return o.buyer_number;
-  if (o.buyer_jid) return o.buyer_jid.split('@')[0];
-  return '-';
+function buyerLabel(o: OrderRecord, phoneMap?: Map<string, string> | null): string {
+  return resolvePhoneNumber(o.buyer_number ?? o.buyer_jid, phoneMap) ?? '-';
 }
 
-function adminLabel(o: OrderRecord): string {
-  return o.admin_jid ? o.admin_jid.split('@')[0] : '-';
+function adminLabel(o: OrderRecord, phoneMap?: Map<string, string> | null): string {
+  return resolvePhoneNumber(o.admin_jid, phoneMap) ?? '-';
 }
 
 /**
  * Susun laporan order dalam format Excel (.xlsx).
  * Mengembalikan Buffer siap dikirim sebagai dokumen WhatsApp.
+ * `phoneMap` dipakai untuk mengubah LID menjadi nomor telepon asli.
  */
 export async function buildOrderReportXlsx(
   groupId: string,
   title: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  phoneMap?: Map<string, string> | null
 ): Promise<Buffer> {
   const { count, totalRevenue, orders } = OrderRepository.summarizeRange(
     groupId,
@@ -149,8 +150,8 @@ export async function buildOrderReportXlsx(
       o.product?.trim() || 'Tanpa keterangan',
       o.amount,
       o.source === 'ocr' ? 'OCR' : 'Manual',
-      buyerLabel(o),
-      adminLabel(o),
+      buyerLabel(o, phoneMap),
+      adminLabel(o, phoneMap),
     ]);
     row.getCell(4).numFmt = '"Rp"#,##0';
     if (i % 2 === 1) {

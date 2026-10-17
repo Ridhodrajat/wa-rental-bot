@@ -6,6 +6,7 @@ import { OrderRepository } from '../src/database/repositories/orderRepository';
 import { BlacklistRepository } from '../src/database/repositories/blacklistRepository';
 import { GroupSettingsRepository } from '../src/database/repositories/settingsRepository';
 import { buildOrderReportXlsx } from '../src/services/orderReportService';
+import { buildPhoneMap, resolvePhoneNumber, resolvePhoneFromCandidates } from '../src/utils/permissions';
 import ExcelJS from 'exceljs';
 import {
   formatScheduleTime,
@@ -197,6 +198,61 @@ describe('Laporan Excel', () => {
     expect(inRange.totalRevenue).toBe(15000);
     const outRange = OrderRepository.summarizeRange(GROUP, '2000-01-01', '2000-01-02');
     expect(outRange.count).toBe(0);
+  });
+
+  test('Pembeli & Admin tampil sebagai nomor asli (LID dipetakan)', async () => {
+    OrderRepository.create({
+      groupId: GROUP,
+      buyerJid: '111222333@lid',
+      buyerNumber: '111222333',
+      product: 'Tes',
+      amount: 1000,
+      adminJid: '444555666@lid',
+    });
+    const today = formatBusinessDate();
+    const phoneMap = new Map<string, string>([
+      ['111222333', '628111111111'],
+      ['444555666', '628222222222'],
+    ]);
+    const buf = await buildOrderReportXlsx(GROUP, 'Tes', today, today, phoneMap);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as unknown as ExcelJS.Buffer);
+    const row = wb.worksheets[0].getRow(6); // header di baris 5, data mulai baris 6
+    expect(String(row.getCell(6).value)).toBe('628111111111');
+    expect(String(row.getCell(7).value)).toBe('628222222222');
+  });
+});
+
+describe('buildPhoneMap (LID -> nomor telepon)', () => {
+  test('memetakan LID dan PN ke nomor asli', () => {
+    const map = buildPhoneMap({
+      participants: [
+        { id: '628111@lid', lid: '628111@lid', phoneNumber: '6281234567890' },
+        { id: '628999888777@s.whatsapp.net' },
+        { id: '999@lid' }, // tanpa nomor -> tidak dipetakan
+      ],
+    });
+    expect(map.get('628111')).toBe('6281234567890');
+    expect(map.get('6281234567890')).toBe('6281234567890');
+    expect(map.get('628999888777')).toBe('628999888777');
+    expect(map.has('999')).toBe(false);
+  });
+
+  test('resolvePhoneNumber fallback ke digit asli', () => {
+    const map = buildPhoneMap({ participants: [{ id: '555@lid', phoneNumber: '6285' }] });
+    expect(resolvePhoneNumber('555@lid', map)).toBe('6285');
+    expect(resolvePhoneNumber('777@lid', map)).toBe('777');
+    expect(resolvePhoneNumber('123@s.whatsapp.net', map)).toBe('123');
+    expect(resolvePhoneNumber(null, map)).toBeNull();
+  });
+
+  test('resolvePhoneFromCandidates: prioritas peta, lalu non-LID, abaikan JID grup', () => {
+    const map = new Map<string, string>([['111', '628111']]);
+    expect(resolvePhoneFromCandidates(['111@lid', '111111111@s.whatsapp.net'], map)).toBe('628111');
+    expect(resolvePhoneFromCandidates(['222@lid', '333@s.whatsapp.net'], map)).toBe('333');
+    expect(resolvePhoneFromCandidates(['444@lid'], map)).toBe('444');
+    expect(resolvePhoneFromCandidates(['1203630@g.us', '555@lid'], map)).toBe('555');
+    expect(resolvePhoneFromCandidates([null, undefined], map)).toBeNull();
   });
 });
 

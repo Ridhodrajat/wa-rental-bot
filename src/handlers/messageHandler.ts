@@ -173,6 +173,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     null;
   const quotedMsg = contextInfo?.quotedMessage ?? undefined;
   const quotedParticipant: string | undefined = contextInfo?.participant ?? undefined;
+  const quotedParticipantAlt: string | undefined = contextInfo?.participantAlt ?? undefined;
   const quotedText: string | undefined =
     quotedMsg?.conversation ||
     quotedMsg?.extendedTextMessage?.text ||
@@ -234,6 +235,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       mentionedJids: msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [],
       quotedMsg,
       quotedParticipant,
+      quotedParticipantAlt,
       quotedText,
       msg,
       groupName,
