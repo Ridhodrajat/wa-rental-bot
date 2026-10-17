@@ -9,3 +9,7 @@ logs/
 *.log
 *.traineddata
 *.traineddata.gz
+
+# Word/Office lock files & file sementara
+~\$*.docx
+PANDUAN_BOT_BARU.docx
