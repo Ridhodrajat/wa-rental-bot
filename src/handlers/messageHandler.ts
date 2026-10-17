@@ -6,6 +6,7 @@ import { getGroupMetadata } from '../connection/whatsapp';
 import { getCommandNames, getCommand } from '../commands/index';
 import { RentalService } from '../services/rentalService';
 import { replyProduct } from '../commands/product';
+import { maybeConfirmPendingOrder } from '../commands/orderConfirm';
 import { GroupRepository } from '../database/repositories/groupRepository';
 import { handlePrivateMessage } from './privateChatHandler';
 import { config } from '../config/env';
@@ -209,8 +210,8 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       await reply('❌ Terjadi kesalahan saat memproses perintah.');
     }
   } else {
-    // Bukan command: coba cari produk (hanya di grup dengan rental aktif)
-    if (isGroup && RentalService.isRentalActive(chatJid)) {
+    // Bukan command: cek konfirmasi order (OCR), lalu coba cari produk
+    if (isGroup) {
       const ctx: CommandContext = {
         chatJid,
         senderJid,
@@ -227,7 +228,15 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
         msg,
         groupName,
       };
-      await replyProduct(ctx, reply);
+
+      // Konfirmasi pencatatan order dari hasil OCR bukti transfer
+      const confirmed = await maybeConfirmPendingOrder(ctx, reply);
+      if (confirmed) return;
+
+      // Auto-reply produk (hanya di grup dengan rental aktif)
+      if (RentalService.isRentalActive(chatJid)) {
+        await replyProduct(ctx, reply);
+      }
     }
   }
 }

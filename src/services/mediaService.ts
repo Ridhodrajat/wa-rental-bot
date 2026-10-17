@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import { downloadMediaMessage, normalizeMessageContent } from '@whiskeysockets/baileys';
 import { config } from '../config/env';
 import logger from '../utils/logger';
 
@@ -99,6 +99,50 @@ export async function saveProductImage(
     return { relativePath, absolutePath };
   } catch (error) {
     logger.error({ error }, 'Gagal menyimpan foto produk');
+    return null;
+  }
+}
+
+/**
+ * Unduh gambar (dikirim langsung atau di-reply) menjadi Buffer.
+ * Dipakai untuk OCR bukti transfer. Mengembalikan null bila bukan gambar/gagal.
+ */
+export async function downloadImageBuffer(msg: any, sock?: any): Promise<Buffer | null> {
+  try {
+    const directContent: any = normalizeMessageContent(msg?.message);
+    const quotedRaw: any = msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const quotedContent: any = normalizeMessageContent(quotedRaw);
+
+    const directImage = directContent?.imageMessage;
+    const quotedImage = quotedContent?.imageMessage;
+    const imageMessage = directImage || quotedImage;
+    if (!imageMessage) return null;
+
+    const targetMessage = directImage
+      ? msg
+      : {
+          key: msg.key,
+          message: quotedRaw,
+        };
+
+    const buffer = (await downloadMediaMessage(
+      targetMessage as any,
+      'buffer',
+      {},
+      {
+        logger: logger as any,
+        reuploadRequest: sock ? (m: any) => sock.updateMediaMessage(m) : async (m: any) => m,
+      }
+    )) as Buffer;
+
+    if (!buffer || buffer.length === 0) return null;
+    if (buffer.length > config.maxMediaSizeBytes) {
+      logger.warn({ size: buffer.length }, 'Ukuran gambar melebihi batas untuk OCR');
+      return null;
+    }
+    return buffer;
+  } catch (error) {
+    logger.error({ error }, 'Gagal mengunduh gambar untuk OCR');
     return null;
   }
 }

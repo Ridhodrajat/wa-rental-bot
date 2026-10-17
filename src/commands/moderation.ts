@@ -1,8 +1,10 @@
 import { CommandContext, ReplyFn } from '../types';
-import { ModerationRepository, TransactionTemplateRepository } from '../database/repositories/settingsRepository';
+import { ModerationRepository, TransactionTemplateRepository, GroupSettingsRepository } from '../database/repositories/settingsRepository';
 import { getSocket, getGroupMetadata } from '../connection/whatsapp';
 import { getDefaultTemplate } from '../templates/messageTemplates';
 import { resolveTemplate } from '../utils/placeholder';
+import { buildDailyOrderReport, todayBizDate } from './storeSchedule';
+import logger from '../utils/logger';
 
 /**
  * Commands moderasi grup (antiwame, antilink, open, close, hidetag, add, kick, promote, demote, linkgc, resetlinkgc).
@@ -109,6 +111,16 @@ export async function handleClose(ctx: CommandContext, reply: ReplyFn): Promise<
       groupName: ctx.groupName ?? 'Grup',
     });
     await sock.sendMessage(ctx.chatJid, { text, mentions });
+
+    // Kirim ringkasan order otomatis bila diaktifkan
+    if (GroupSettingsRepository.isDataOrderEnabled(ctx.chatJid)) {
+      try {
+        const report = buildDailyOrderReport(ctx.chatJid, todayBizDate(), 'Laporan Order Hari Ini');
+        await sock.sendMessage(ctx.chatJid, { text: report });
+      } catch (reportError) {
+        logger.error({ error: reportError }, 'Gagal mengirim laporan order saat close');
+      }
+    }
   } catch (error) {
     await reply('❌ Gagal menutup grup. Pastikan bot adalah admin.');
   }
