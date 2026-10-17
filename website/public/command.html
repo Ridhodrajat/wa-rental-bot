@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daftar Perintah — IDAIDO BOT</title>
+  <meta name="description" content="Daftar lengkap 82 perintah IDAIDO BOT.">
+  <meta property="og:title" content="Daftar Perintah — IDAIDO BOT">
+  <meta property="og:description" content="Daftar lengkap 82 perintah IDAIDO BOT.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header" id="top">
+    <div class="container header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">ID</span>
+        <span class="brand-name">IDAIDO BOT</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav">
+        <ul>
+          <li><a href="index.html">Beranda</a></li>
+          <li><a href="index.html#fitur">Fitur</a></li>
+          <li><a href="index.html#harga">Harga</a></li>
+          <li><a href="command.html" class="active">Perintah</a></li>
+          <li><a href="panduan.html">Panduan</a></li>
+          <li><a href="panduan.html#faq">FAQ</a></li>
+        </ul>
+        <a class="btn btn-wa btn-sm" href="https://wa.me/6289510214771?text=Halo%2C%20saya%20tertarik%20menyewa%20bot%20untuk%20grup%20WhatsApp%20saya.%20Boleh%20info%20paketnya%3F" target="_blank" rel="noopener">Hubungi Owner</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+
+    <section class="page-head">
+      <div class="container">
+        <h1>Daftar Perintah</h1>
+        <p>82 perintah siap pakai. Ketik dengan awalan <code>.</code> atau tanpa awalan, tidak peka huruf besar/kecil.</p>
+      </div>
+    </section>
+
+    <section class="container section">
+      <div class="callout">
+        <h3>Cara menulis perintah</h3>
+        <ul>
+          <li>Awalan perintah adalah <code>.</code>. Contoh: <code>.list</code>.</li>
+          <li>Bisa juga tanpa awalan bila kata pertama cocok. Contoh: <code>list</code>.</li>
+          <li>Balas (reply) pesan pelanggan untuk perintah seperti proses dan selesai.</li>
+          <li>Beberapa perintah memakai tag. Contoh: <code>.kick @user</code>.</li>
+        </ul>
+      </div>
+
+      <div class="command-controls">
+        <input type="search" id="commandSearch" class="search" placeholder="Cari perintah... (mis. laporan, blacklist, katalog)">
+        <div class="chips" id="commandChips">
+          <button class="chip active" type="button" data-filter="all">Semua <span>82</span></button>
+          <button class="chip" type="button" data-filter="owner">Owner &amp; Info <span>11</span></button>
+          <button class="chip" type="button" data-filter="product">Katalog Produk <span>12</span></button>
+          <button class="chip" type="button" data-filter="transaction">Transaksi <span>10</span></button>
+          <button class="chip" type="button" data-filter="welcome">Welcome / Goodbye <span>8</span></button>
+          <button class="chip" type="button" data-filter="moderation">Moderasi Grup <span>21</span></button>
+          <button class="chip" type="button" data-filter="settings">Pengaturan Bot <span>17</span></button>
+          <button class="chip" type="button" data-filter="utility">Utilitas <span>3</span></button>
+        </div>
+        <select id="accessFilter" class="select">
+          <option value="all">Semua akses</option>
+          <option value="allusers">Semua pengguna</option>
+          <option value="admin">Admin / Owner</option>
+          <option value="owner">Khusus owner</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table class="command-table">
+          <thead>
+            <tr><th>Perintah</th><th>Kegunaan</th><th>Contoh</th><th>Akses</th></tr>
+          </thead>
+          <tbody id="commandRows">
+        <tr data-category="owner" data-access="all" data-search="menu menampilkan menu bot owner &amp; info">
+          <td data-label="Perintah"><code>.menu</code></td>
+          <td data-label="Kegunaan">Menampilkan menu bot</td>
+          <td data-label="Contoh"><code>.menu</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="all" data-search="owner menampilkan kontak owner owner &amp; info">
+          <td data-label="Perintah"><code>.owner</code></td>
+          <td data-label="Kegunaan">Menampilkan kontak owner</td>
+          <td data-label="Contoh"><code>.owner</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="addsewa tambah/perpanjang sewa (owner) owner &amp; info">
+          <td data-label="Perintah"><code>.addsewa</code></td>
+          <td data-label="Kegunaan">Tambah/perpanjang sewa (owner)</td>
+          <td data-label="Contoh"><code>.addsewa</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="delsewa nonaktifkan sewa (owner) owner &amp; info">
+          <td data-label="Perintah"><code>.delsewa</code></td>
+          <td data-label="Kegunaan">Nonaktifkan sewa (owner)</td>
+          <td data-label="Contoh"><code>.delsewa</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="all" data-search="ceksewa cek status sewa grup owner &amp; info">
+          <td data-label="Perintah"><code>.ceksewa</code></td>
+          <td data-label="Kegunaan">Cek status sewa grup</td>
+          <td data-label="Contoh"><code>.ceksewa</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="listsewa list semua rental (owner) owner &amp; info">
+          <td data-label="Perintah"><code>.listsewa</code></td>
+          <td data-label="Kegunaan">List semua rental (owner)</td>
+          <td data-label="Contoh"><code>.listsewa</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="antiprivate aktifkan/matikan anti private chat owner &amp; info">
+          <td data-label="Perintah"><code>.antiprivate</code></td>
+          <td data-label="Kegunaan">Aktifkan/matikan anti private chat</td>
+          <td data-label="Contoh"><code>.antiprivate</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="setprivatelimit atur batas pesan private owner &amp; info">
+          <td data-label="Perintah"><code>.setprivatelimit</code></td>
+          <td data-label="Kegunaan">Atur batas pesan private</td>
+          <td data-label="Contoh"><code>.setprivatelimit</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="autoblock auto-block internal on/off owner &amp; info">
+          <td data-label="Perintah"><code>.autoblock</code></td>
+          <td data-label="Kegunaan">Auto-block internal on/off</td>
+          <td data-label="Contoh"><code>.autoblock</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="cekantiprivate lihat status anti private chat owner &amp; info">
+          <td data-label="Perintah"><code>.cekantiprivate</code></td>
+          <td data-label="Kegunaan">Lihat status anti private chat</td>
+          <td data-label="Contoh"><code>.cekantiprivate</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="owner" data-access="owner" data-search="setowner simpan nomor owner override owner &amp; info">
+          <td data-label="Perintah"><code>.setowner</code></td>
+          <td data-label="Kegunaan">Simpan nomor owner override</td>
+          <td data-label="Contoh"><code>.setowner</code></td>
+          <td data-label="Akses"><span class="tag tag-owner">Owner</span> <span class="tag tag-cat">Owner &amp; Info</span></td>
+        </tr>
+        <tr data-category="product" data-access="all" data-search="list lihat katalog produk katalog produk">
+          <td data-label="Perintah"><code>.list</code></td>
+          <td data-label="Kegunaan">Lihat katalog produk</td>
+          <td data-label="Contoh"><code>.list</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="addlist tambah produk katalog produk">
+          <td data-label="Perintah"><code>.addlist</code></td>
+          <td data-label="Kegunaan">Tambah produk</td>
+          <td data-label="Contoh"><code>.addlist netflix|Netflix Premium 1 Bulan - Rp50.000</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="updatelist ubah info produk katalog produk">
+          <td data-label="Perintah"><code>.updatelist</code></td>
+          <td data-label="Kegunaan">Ubah info produk</td>
+          <td data-label="Contoh"><code>.updatelist netflix|Deskripsi baru</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="renamelist ganti nama produk katalog produk">
+          <td data-label="Perintah"><code>.renamelist</code></td>
+          <td data-label="Kegunaan">Ganti nama produk</td>
+          <td data-label="Contoh"><code>.renamelist netflix|netflix premium</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="dellist hapus produk katalog produk">
+          <td data-label="Perintah"><code>.dellist</code></td>
+          <td data-label="Kegunaan">Hapus produk</td>
+          <td data-label="Contoh"><code>.dellist netflix</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="setproses pilih template proses transaksi">
+          <td data-label="Perintah"><code>.setproses</code></td>
+          <td data-label="Kegunaan">Pilih template proses</td>
+          <td data-label="Contoh"><code>.setproses 1</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="changeproses ubah template proses transaksi">
+          <td data-label="Perintah"><code>.changeproses</code></td>
+          <td data-label="Kegunaan">Ubah template proses</td>
+          <td data-label="Contoh"><code>.changeproses</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="delsetproses reset template proses transaksi">
+          <td data-label="Perintah"><code>.delsetproses</code></td>
+          <td data-label="Kegunaan">Reset template proses</td>
+          <td data-label="Contoh"><code>.delsetproses</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="setdone pilih template selesai transaksi">
+          <td data-label="Perintah"><code>.setdone</code></td>
+          <td data-label="Kegunaan">Pilih template selesai</td>
+          <td data-label="Contoh"><code>.setdone 1</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="changedone ubah template selesai transaksi">
+          <td data-label="Perintah"><code>.changedone</code></td>
+          <td data-label="Kegunaan">Ubah template selesai</td>
+          <td data-label="Contoh"><code>.changedone</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="delsetdone reset template selesai transaksi">
+          <td data-label="Perintah"><code>.delsetdone</code></td>
+          <td data-label="Kegunaan">Reset template selesai</td>
+          <td data-label="Contoh"><code>.delsetdone</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="proses kelola/kirim template proses transaksi">
+          <td data-label="Perintah"><code>.proses</code></td>
+          <td data-label="Kegunaan">Kelola/kirim template proses</td>
+          <td data-label="Contoh"><code>.proses   (balas chat pelanggan)</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="done kelola/kirim template selesai transaksi">
+          <td data-label="Perintah"><code>.done</code></td>
+          <td data-label="Kegunaan">Kelola/kirim template selesai</td>
+          <td data-label="Contoh"><code>.done 50000   (balas chat pelanggan)</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="setopen pilih template pesan open transaksi">
+          <td data-label="Perintah"><code>.setopen</code></td>
+          <td data-label="Kegunaan">Pilih template pesan open</td>
+          <td data-label="Contoh"><code>.setopen</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="transaction" data-access="admin" data-search="setclose pilih template pesan close transaksi">
+          <td data-label="Perintah"><code>.setclose</code></td>
+          <td data-label="Kegunaan">Pilih template pesan close</td>
+          <td data-label="Contoh"><code>.setclose</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Transaksi</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="setlisttemplate pilih template katalog katalog produk">
+          <td data-label="Perintah"><code>.setlisttemplate</code></td>
+          <td data-label="Kegunaan">Pilih template katalog</td>
+          <td data-label="Contoh"><code>.setlisttemplate</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="all" data-search="previewlist preview katalog katalog produk">
+          <td data-label="Perintah"><code>.previewlist</code></td>
+          <td data-label="Kegunaan">Preview katalog</td>
+          <td data-label="Contoh"><code>.previewlist</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="setlistheader atur header katalog manual katalog produk">
+          <td data-label="Perintah"><code>.setlistheader</code></td>
+          <td data-label="Kegunaan">Atur header katalog manual</td>
+          <td data-label="Contoh"><code>.setlistheader</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="setlistfooter atur footer katalog manual katalog produk">
+          <td data-label="Perintah"><code>.setlistfooter</code></td>
+          <td data-label="Kegunaan">Atur footer katalog manual</td>
+          <td data-label="Contoh"><code>.setlistfooter</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="resetlisttemplate reset template katalog katalog produk">
+          <td data-label="Perintah"><code>.resetlisttemplate</code></td>
+          <td data-label="Kegunaan">Reset template katalog</td>
+          <td data-label="Contoh"><code>.resetlisttemplate</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="exportlist export katalog ke excel/teks katalog produk">
+          <td data-label="Perintah"><code>.exportlist</code></td>
+          <td data-label="Kegunaan">Export katalog ke Excel/Teks</td>
+          <td data-label="Contoh"><code>.exportlist 1</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="product" data-access="admin" data-search="importlist import katalog dari file katalog produk">
+          <td data-label="Perintah"><code>.importlist</code></td>
+          <td data-label="Kegunaan">Import katalog dari file</td>
+          <td data-label="Contoh"><code>.importlist</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Katalog Produk</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="all" data-search="welcome kelola welcome (on/off/preview) welcome / goodbye">
+          <td data-label="Perintah"><code>.welcome</code></td>
+          <td data-label="Kegunaan">Kelola welcome (on/off/preview)</td>
+          <td data-label="Contoh"><code>.welcome</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="all" data-search="goodbye kelola goodbye (on/off/preview) welcome / goodbye">
+          <td data-label="Perintah"><code>.goodbye</code></td>
+          <td data-label="Kegunaan">Kelola goodbye (on/off/preview)</td>
+          <td data-label="Contoh"><code>.goodbye</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="setwelcome pilih/atur template welcome welcome / goodbye">
+          <td data-label="Perintah"><code>.setwelcome</code></td>
+          <td data-label="Kegunaan">Pilih/atur template welcome</td>
+          <td data-label="Contoh"><code>.setwelcome 1</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="changewelcome ubah template welcome welcome / goodbye">
+          <td data-label="Perintah"><code>.changewelcome</code></td>
+          <td data-label="Kegunaan">Ubah template welcome</td>
+          <td data-label="Contoh"><code>.changewelcome</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="delsetwelcome reset template welcome welcome / goodbye">
+          <td data-label="Perintah"><code>.delsetwelcome</code></td>
+          <td data-label="Kegunaan">Reset template welcome</td>
+          <td data-label="Contoh"><code>.delsetwelcome</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="setleft pilih/atur template goodbye welcome / goodbye">
+          <td data-label="Perintah"><code>.setleft</code></td>
+          <td data-label="Kegunaan">Pilih/atur template goodbye</td>
+          <td data-label="Contoh"><code>.setleft 1</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="changeleft ubah template goodbye welcome / goodbye">
+          <td data-label="Perintah"><code>.changeleft</code></td>
+          <td data-label="Kegunaan">Ubah template goodbye</td>
+          <td data-label="Contoh"><code>.changeleft</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="welcome" data-access="admin" data-search="delsetleft reset template goodbye welcome / goodbye">
+          <td data-label="Perintah"><code>.delsetleft</code></td>
+          <td data-label="Kegunaan">Reset template goodbye</td>
+          <td data-label="Contoh"><code>.delsetleft</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Welcome / Goodbye</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="antiwame antiwame mode 1 moderasi grup">
+          <td data-label="Perintah"><code>.antiwame</code></td>
+          <td data-label="Kegunaan">Antiwame mode 1</td>
+          <td data-label="Contoh"><code>.antiwame</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="antiwame2 antiwame mode 2 moderasi grup">
+          <td data-label="Perintah"><code>.antiwame2</code></td>
+          <td data-label="Kegunaan">Antiwame mode 2</td>
+          <td data-label="Contoh"><code>.antiwame2</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="antilink antilink mode 1 moderasi grup">
+          <td data-label="Perintah"><code>.antilink</code></td>
+          <td data-label="Kegunaan">Antilink mode 1</td>
+          <td data-label="Contoh"><code>.antilink</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="antilink2 antilink mode 2 moderasi grup">
+          <td data-label="Perintah"><code>.antilink2</code></td>
+          <td data-label="Kegunaan">Antilink mode 2</td>
+          <td data-label="Contoh"><code>.antilink2</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="open buka grup moderasi grup">
+          <td data-label="Perintah"><code>.open</code></td>
+          <td data-label="Kegunaan">Buka grup</td>
+          <td data-label="Contoh"><code>.open</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="close tutup grup moderasi grup">
+          <td data-label="Perintah"><code>.close</code></td>
+          <td data-label="Kegunaan">Tutup grup</td>
+          <td data-label="Contoh"><code>.close</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="hidetag tag semua anggota moderasi grup">
+          <td data-label="Perintah"><code>.hidetag</code></td>
+          <td data-label="Kegunaan">Tag semua anggota</td>
+          <td data-label="Contoh"><code>.hidetag Info penting</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="add tambah anggota moderasi grup">
+          <td data-label="Perintah"><code>.add</code></td>
+          <td data-label="Kegunaan">Tambah anggota</td>
+          <td data-label="Contoh"><code>.add 628123456789</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="kick keluarkan anggota moderasi grup">
+          <td data-label="Perintah"><code>.kick</code></td>
+          <td data-label="Kegunaan">Keluarkan anggota</td>
+          <td data-label="Contoh"><code>.kick @user</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="promote jadikan admin moderasi grup">
+          <td data-label="Perintah"><code>.promote</code></td>
+          <td data-label="Kegunaan">Jadikan admin</td>
+          <td data-label="Contoh"><code>.promote @user</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="demote turunkan admin moderasi grup">
+          <td data-label="Perintah"><code>.demote</code></td>
+          <td data-label="Kegunaan">Turunkan admin</td>
+          <td data-label="Contoh"><code>.demote @user</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="linkgc ambil tautan grup moderasi grup">
+          <td data-label="Perintah"><code>.linkgc</code></td>
+          <td data-label="Kegunaan">Ambil tautan grup</td>
+          <td data-label="Contoh"><code>.linkgc</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="resetlinkgc reset tautan grup moderasi grup">
+          <td data-label="Perintah"><code>.resetlinkgc</code></td>
+          <td data-label="Kegunaan">Reset tautan grup</td>
+          <td data-label="Contoh"><code>.resetlinkgc</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="deletemsg hapus pesan (reply) moderasi grup">
+          <td data-label="Perintah"><code>.deletemsg</code></td>
+          <td data-label="Kegunaan">Hapus pesan (reply)</td>
+          <td data-label="Contoh"><code>.deletemsg</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="revokelinkgc reset tautan grup moderasi grup">
+          <td data-label="Perintah"><code>.revokelinkgc</code></td>
+          <td data-label="Kegunaan">Reset tautan grup</td>
+          <td data-label="Contoh"><code>.revokelinkgc</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="addadmin jadikan admin moderasi grup">
+          <td data-label="Perintah"><code>.addadmin</code></td>
+          <td data-label="Kegunaan">Jadikan admin</td>
+          <td data-label="Contoh"><code>.addadmin</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="addblacklist tambah ke blacklist moderasi grup">
+          <td data-label="Perintah"><code>.addblacklist</code></td>
+          <td data-label="Kegunaan">Tambah ke blacklist</td>
+          <td data-label="Contoh"><code>.addblacklist 628123456789 Penipu</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="editblacklist edit blacklist moderasi grup">
+          <td data-label="Perintah"><code>.editblacklist</code></td>
+          <td data-label="Kegunaan">Edit blacklist</td>
+          <td data-label="Contoh"><code>.editblacklist</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="deleteblacklist hapus dari blacklist moderasi grup">
+          <td data-label="Perintah"><code>.deleteblacklist</code></td>
+          <td data-label="Kegunaan">Hapus dari blacklist</td>
+          <td data-label="Contoh"><code>.deleteblacklist 628123456789</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="admin" data-search="viewblacklist lihat blacklist moderasi grup">
+          <td data-label="Perintah"><code>.viewblacklist</code></td>
+          <td data-label="Kegunaan">Lihat blacklist</td>
+          <td data-label="Contoh"><code>.viewblacklist</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="moderation" data-access="all" data-search="blacklisthelp bantuan blacklist moderasi grup">
+          <td data-label="Perintah"><code>.blacklisthelp</code></td>
+          <td data-label="Kegunaan">Bantuan blacklist</td>
+          <td data-label="Contoh"><code>.blacklisthelp</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Moderasi Grup</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="autoopen buka otomatis on/off pengaturan bot">
+          <td data-label="Perintah"><code>.autoopen</code></td>
+          <td data-label="Kegunaan">Buka otomatis on/off</td>
+          <td data-label="Contoh"><code>.autoopen on</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="autoopenset atur jam buka otomatis pengaturan bot">
+          <td data-label="Perintah"><code>.autoopenset</code></td>
+          <td data-label="Kegunaan">Atur jam buka otomatis</td>
+          <td data-label="Contoh"><code>.autoopenset 08:00</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="autoclose tutup otomatis on/off pengaturan bot">
+          <td data-label="Perintah"><code>.autoclose</code></td>
+          <td data-label="Kegunaan">Tutup otomatis on/off</td>
+          <td data-label="Contoh"><code>.autoclose on</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="autocloseset atur jam tutup otomatis pengaturan bot">
+          <td data-label="Perintah"><code>.autocloseset</code></td>
+          <td data-label="Kegunaan">Atur jam tutup otomatis</td>
+          <td data-label="Contoh"><code>.autocloseset 22:00</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataorder laporan order otomatis on/off pengaturan bot">
+          <td data-label="Perintah"><code>.dataorder</code></td>
+          <td data-label="Kegunaan">Laporan order otomatis on/off</td>
+          <td data-label="Contoh"><code>.dataorder on</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataordernow laporan order hari ini (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataordernow</code></td>
+          <td data-label="Kegunaan">Laporan order hari ini (Excel)</td>
+          <td data-label="Contoh"><code>.dataordernow</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataorderlast laporan order kemarin (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataorderlast</code></td>
+          <td data-label="Kegunaan">Laporan order kemarin (Excel)</td>
+          <td data-label="Contoh"><code>.dataorderlast</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataorderweek laporan order minggu ini (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataorderweek</code></td>
+          <td data-label="Kegunaan">Laporan order minggu ini (Excel)</td>
+          <td data-label="Contoh"><code>.dataorderweek</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataorderlastweek laporan order minggu lalu (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataorderlastweek</code></td>
+          <td data-label="Kegunaan">Laporan order minggu lalu (Excel)</td>
+          <td data-label="Contoh"><code>.dataorderlastweek</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataordermonth laporan order bulan ini (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataordermonth</code></td>
+          <td data-label="Kegunaan">Laporan order bulan ini (Excel)</td>
+          <td data-label="Contoh"><code>.dataordermonth</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="dataorderlastmonth laporan order bulan lalu (excel) pengaturan bot">
+          <td data-label="Perintah"><code>.dataorderlastmonth</code></td>
+          <td data-label="Kegunaan">Laporan order bulan lalu (Excel)</td>
+          <td data-label="Contoh"><code>.dataorderlastmonth</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="all" data-search="dataorderhelp bantuan data order pengaturan bot">
+          <td data-label="Perintah"><code>.dataorderhelp</code></td>
+          <td data-label="Kegunaan">Bantuan data order</td>
+          <td data-label="Contoh"><code>.dataorderhelp</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="setnominal koreksi nominal order terakhir pengaturan bot">
+          <td data-label="Perintah"><code>.setnominal</code></td>
+          <td data-label="Kegunaan">Koreksi nominal order terakhir</td>
+          <td data-label="Contoh"><code>.setnominal 50000</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="setppgc ubah foto profil grup pengaturan bot">
+          <td data-label="Perintah"><code>.setppgc</code></td>
+          <td data-label="Kegunaan">Ubah foto profil grup</td>
+          <td data-label="Contoh"><code>.setppgc   (balas sebuah gambar)</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="setnamegc ubah nama grup pengaturan bot">
+          <td data-label="Perintah"><code>.setnamegc</code></td>
+          <td data-label="Kegunaan">Ubah nama grup</td>
+          <td data-label="Contoh"><code>.setnamegc Nama Grup Baru</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="setdesgc ubah deskripsi grup pengaturan bot">
+          <td data-label="Perintah"><code>.setdesgc</code></td>
+          <td data-label="Kegunaan">Ubah deskripsi grup</td>
+          <td data-label="Contoh"><code>.setdesgc Deskripsi grup baru</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="settings" data-access="admin" data-search="setbot simpan konfigurasi bot pengaturan bot">
+          <td data-label="Perintah"><code>.setbot</code></td>
+          <td data-label="Kegunaan">Simpan konfigurasi bot</td>
+          <td data-label="Contoh"><code>.setbot</code></td>
+          <td data-label="Akses"><span class="tag tag-admin">Admin</span> <span class="tag tag-cat">Pengaturan Bot</span></td>
+        </tr>
+        <tr data-category="utility" data-access="all" data-search="afk aktifkan status afk utilitas">
+          <td data-label="Perintah"><code>.afk</code></td>
+          <td data-label="Kegunaan">Aktifkan status AFK</td>
+          <td data-label="Contoh"><code>.afk sedang keluar</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Utilitas</span></td>
+        </tr>
+        <tr data-category="utility" data-access="all" data-search="status cek status teknis bot utilitas">
+          <td data-label="Perintah"><code>.status</code></td>
+          <td data-label="Kegunaan">Cek status teknis bot</td>
+          <td data-label="Contoh"><code>.status</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Utilitas</span></td>
+        </tr>
+        <tr data-category="utility" data-access="all" data-search="bot info bot utilitas">
+          <td data-label="Perintah"><code>.bot</code></td>
+          <td data-label="Kegunaan">Info bot</td>
+          <td data-label="Contoh"><code>.bot</code></td>
+          <td data-label="Akses"><span class="tag tag-all">Semua</span> <span class="tag tag-cat">Utilitas</span></td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note" id="noResult" hidden>Tidak ada perintah yang cocok.</p>
+
+      <h2 class="sub-title">Alias Cepat</h2>
+      <div class="table-wrap">
+        <table class="command-table">
+          <thead><tr><th>Alias</th><th>Kegunaan</th><th>Contoh</th></tr></thead>
+          <tbody>
+        <tr>
+          <td><code>.cekmenu</code></td>
+          <td>Menampilkan menu bot (alias)</td>
+          <td><code>.cekmenu</code></td>
+        </tr>
+        <tr>
+          <td><code>.p</code></td>
+          <td>Proses pesanan (alias)</td>
+          <td><code>.p   (alias dari proses)</code></td>
+        </tr>
+        <tr>
+          <td><code>.d</code></td>
+          <td>Selesaikan pesanan (alias)</td>
+          <td><code>.d 50000   (alias dari done)</code></td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>IDAIDO BOT</strong>
+        <p>Bot WhatsApp serba bisa untuk grup jualan kamu</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Beranda</a>
+        <a href="command.html">Daftar Perintah</a>
+        <a href="panduan.html">Panduan</a>
+        <a href="panduan.html#faq">FAQ</a>
+      </div>
+      <p class="footer-note">Bot ini memakai library tidak resmi (Baileys) dan bukan produk resmi WhatsApp. Gunakan secara wajar dan bertanggung jawab.</p>
+      <p class="footer-copy">&copy; <span id="year"></span> IDAIDO BOT.</p>
+    </div>
+  </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
