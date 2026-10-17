@@ -56,7 +56,7 @@ export async function maybeConfirmPendingOrder(
     product: pending.product,
     amount,
     source: 'ocr',
-    adminJid: ctx.senderJid,
+    adminJid: pending.adminJid ?? ctx.senderJid,
   });
   PendingOrderService.clear(ctx.chatJid, ctx.senderJid);
 

@@ -169,6 +169,7 @@ export interface CommandContext {
   mentionedJids: string[];
   quotedMsg?: any;
   quotedParticipant?: string; // JID pengirim pesan yang di-reply
+  quotedParticipantAlt?: string; // Varian nomor asli (PN) dari pengirim yang di-reply, bila ada
   quotedText?: string; // Teks/caption dari pesan yang di-reply
   msg: any;
   groupName?: string;

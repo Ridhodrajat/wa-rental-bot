@@ -6,8 +6,9 @@ import { resolveTemplate, displayNameFromJid } from '../utils/placeholder';
 import { PendingOrderService } from '../services/pendingOrderService';
 import { downloadImageBuffer } from '../services/mediaService';
 import { ocrImageText } from '../services/ocrService';
-import { getSocket } from '../connection/whatsapp';
+import { getSocket, getGroupMetadata } from '../connection/whatsapp';
 import { extractAmountFromText, formatRupiah } from '../utils/amount';
+import { buildPhoneMap, resolvePhoneFromCandidates } from '../utils/permissions';
 import { splitProductAndAmount } from '../utils/orderArgs';
 import logger from '../utils/logger';
 
@@ -93,9 +94,33 @@ async function sendTransaction(
  */
 async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   const { product: productFromArgs, amount: explicitAmount } = splitProductAndAmount(ctx.fullArgs);
-  const buyerJid = ctx.quotedParticipant || undefined;
-  const buyerNumber = buyerJid ? displayNameFromJid(buyerJid) : undefined;
   const product = productFromArgs || ctx.quotedText?.trim() || null;
+
+  // Resolusi LID -> nomor telepon asli memakai metadata grup, agar kolom
+  // Pembeli/Admin pada laporan menampilkan nomor HP (bukan LID anonim).
+  let phoneMap: Map<string, string> | null = null;
+  try {
+    phoneMap = buildPhoneMap(await getGroupMetadata(ctx.chatJid));
+  } catch {
+    phoneMap = null;
+  }
+  const buyerJid = ctx.quotedParticipant || undefined;
+  const buyerNumber =
+    resolvePhoneFromCandidates([ctx.quotedParticipant, ctx.quotedParticipantAlt], phoneMap) ??
+    undefined;
+  const adminNumber = resolvePhoneFromCandidates(
+    [
+      ctx.senderJid,
+      ctx.senderNumber,
+      ctx.msg?.key?.participant,
+      ctx.msg?.key?.participantAlt,
+      ctx.msg?.key?.participantPn,
+      ctx.msg?.key?.senderPn,
+      ctx.msg?.participantAlt,
+    ],
+    phoneMap
+  );
+  const adminJid = adminNumber ? `${adminNumber}@s.whatsapp.net` : ctx.senderJid;
 
   // 1) Nominal eksplisit -> simpan langsung
   if (explicitAmount != null) {
@@ -106,7 +131,7 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
       product,
       amount: explicitAmount,
       source: 'manual',
-      adminJid: ctx.senderJid,
+      adminJid,
     });
     await reply(
       `🧾 Order dicatat: *${formatRupiah(explicitAmount)}*` + (product ? `\n🛍️ ${product}` : '')
@@ -130,7 +155,7 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
 
     PendingOrderService.set({
       groupId: ctx.chatJid,
-      adminJid: ctx.senderJid,
+      adminJid,
       product,
       buyerJid: buyerJid ?? null,
       buyerNumber: buyerNumber ?? null,
