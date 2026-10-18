@@ -1,7 +1,7 @@
 import type { WASocket } from '@whiskeysockets/baileys';
 import { CommandContext, ReplyFn, ReplyOptions } from '../types';
 import { parseCommand, isJidGroup, extractJidNumber } from '../utils/parser';
-import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata, participantIsAdmin } from '../utils/permissions';
+import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMetadata, participantIsAdmin, buildPhoneMap, resolvePhoneFromCandidates } from '../utils/permissions';
 import { getGroupMetadata } from '../connection/whatsapp';
 import { getCommandNames, getCommand } from '../commands/index';
 import { RentalService } from '../services/rentalService';
@@ -9,6 +9,8 @@ import { replyProduct } from '../commands/product';
 import { maybeConfirmPendingOrder } from '../commands/orderConfirm';
 import { GroupRepository } from '../database/repositories/groupRepository';
 import { BlacklistRepository } from '../database/repositories/blacklistRepository';
+import { ModerationRepository } from '../database/repositories/settingsRepository';
+import { containsLink, containsPhoneNumber } from '../utils/moderationDetect';
 import { handlePrivateMessage } from './privateChatHandler';
 import { config } from '../config/env';
 import logger from '../utils/logger';
@@ -17,6 +19,24 @@ import logger from '../utils/logger';
  * Handler pesan masuk utama.
  * Parsing, validasi, dispatch ke command atau pencarian produk.
  */
+
+/**
+ * Cari ID peserta grup yang cocok dengan salah satu JID pengirim.
+ * Diperlukan karena WhatsApp bisa memakai LID maupun nomor telepon,
+ * sedangkan API grup mengharapkan ID seperti yang ada di metadata.
+ */
+function resolveParticipantId(metadata: any, candidates: string[], fallback: string): string {
+  const participants = metadata?.participants;
+  if (!Array.isArray(participants)) return fallback;
+
+  for (const p of participants) {
+    for (const field of [p.id, p.lid, p.jid, p.phoneNumber]) {
+      if (typeof field === 'string' && candidates.includes(field)) return p.id ?? fallback;
+    }
+  }
+
+  return fallback;
+}
 
 export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<void> {
   const key = msg.key;
@@ -160,6 +180,76 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
           logger.debug({ error }, 'Gagal menghapus pesan pengguna blacklist');
         }
         await reply('⚠️ Nomor ini terdaftar di blacklist grup. Pesan Anda dihapus.');
+        return;
+      }
+    }
+  }
+
+  // ============ ANTILINK & ANTIWAME ============
+  // Mode: 1 = hapus pesan + peringatan, 2 = hapus pesan + keluarkan pengirim.
+  // Dikecualikan untuk owner bot & admin grup.
+  if (isGroup && !isOwnerUser && !isAdminUser) {
+    const moderation = ModerationRepository.get(chatJid);
+
+    if (moderation && (moderation.antilink_mode > 0 || moderation.antiwame_mode > 0)) {
+      const linkDetected = moderation.antilink_mode > 0 && containsLink(body);
+      const phoneDetected =
+        !linkDetected && moderation.antiwame_mode > 0 && containsPhoneNumber(body);
+
+      if (linkDetected || phoneDetected) {
+        const label = linkDetected ? 'ANTILINK' : 'ANTIWAME';
+        const mode = linkDetected ? moderation.antilink_mode : moderation.antiwame_mode;
+        const reason = linkDetected ? 'mengirim tautan' : 'mengirim nomor WhatsApp';
+
+        if (!isBotAdminUser) {
+          logger.warn(
+            { chatJid, label },
+            'Moderasi dilewati: bot bukan admin grup sehingga pesan tidak bisa dihapus'
+          );
+          return;
+        }
+
+        try {
+          await sock.sendMessage(chatJid, { delete: msg.key });
+        } catch (error) {
+          logger.debug({ error, chatJid, label }, 'Gagal menghapus pesan moderasi');
+        }
+
+        const phoneMap = buildPhoneMap(groupMetadata);
+        const displayNumber =
+          resolvePhoneFromCandidates(allSenderJids, phoneMap) ?? senderNumber;
+        const mentionJid =
+          allSenderJids.find((jid) => jid.endsWith('@s.whatsapp.net')) ??
+          resolveParticipantId(groupMetadata, allSenderJids, senderJid);
+        const mentions = mentionJid ? [mentionJid] : undefined;
+
+        logger.info(
+          { chatJid, label, mode, senderNumber },
+          'Moderasi grup dijalankan'
+        );
+
+        if (mode >= 2) {
+          try {
+            const kickTarget = resolveParticipantId(groupMetadata, allSenderJids, mentionJid);
+            await sock.groupParticipantsUpdate(chatJid, [kickTarget], 'remove');
+            await reply(
+              `⚠️ *${label}*\n@${displayNumber} dikeluarkan dari grup karena ${reason}.`,
+              { mentions }
+            );
+          } catch (error) {
+            logger.error({ error, chatJid, label }, 'Gagal mengeluarkan anggota (moderasi)');
+            await reply(
+              `⚠️ *${label}*\nPesan @${displayNumber} dihapus karena ${reason}.`,
+              { mentions }
+            );
+          }
+        } else {
+          await reply(
+            `⚠️ *${label}*\nPesan @${displayNumber} dihapus karena ${reason}. Mohon tidak mengulangi.`,
+            { mentions }
+          );
+        }
+
         return;
       }
     }
