@@ -86,8 +86,8 @@ register({ name: 'exportlist', handler: catalogIOCmd.handleExportList, ownerOnly
 register({ name: 'importlist', handler: catalogIOCmd.handleImportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Import katalog dari file', category: 'product' });
 
 // ============ Welcome / Goodbye ============
-register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Kelola welcome (on/off/preview)', category: 'welcome' });
-register({ name: 'goodbye', handler: welcomeCmd.handleGoodbye, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Kelola goodbye (on/off/preview)', category: 'welcome' });
+register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kelola welcome (on/off/preview)', category: 'welcome' });
+register({ name: 'goodbye', handler: welcomeCmd.handleGoodbye, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kelola goodbye (on/off/preview)', category: 'welcome' });
 register({ name: 'setwelcome', handler: welcomeCmd.handleSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih/atur template welcome', category: 'welcome' });
 register({ name: 'changewelcome', handler: welcomeCmd.handleChangeWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah template welcome', category: 'welcome' });
 register({ name: 'delsetwelcome', handler: welcomeCmd.handleDelSetWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template welcome', category: 'welcome' });
@@ -118,7 +118,7 @@ register({ name: 'addblacklist', handler: advModCmd.handleAddBlacklist, ownerOnl
 register({ name: 'editblacklist', handler: advModCmd.handleEditBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Edit blacklist', category: 'moderation' });
 register({ name: 'deleteblacklist', handler: advModCmd.handleDeleteBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Hapus dari blacklist', category: 'moderation' });
 register({ name: 'viewblacklist', handler: advModCmd.handleViewBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Lihat blacklist', category: 'moderation' });
-register({ name: 'blacklisthelp', handler: advModCmd.handleBlacklistHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan blacklist', category: 'moderation' });
+register({ name: 'blacklisthelp', handler: advModCmd.handleBlacklistHelp, ownerOnly: false, adminOnly: true, groupOnly: false, description: 'Bantuan blacklist', category: 'moderation' });
 
 // ============ Store Schedule & Data ============
 register({ name: 'autoopen', handler: scheduleCmd.handleAutoOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka otomatis on/off', category: 'settings' });
@@ -132,7 +132,7 @@ register({ name: 'dataorderweek', handler: scheduleCmd.handleDataOrderWeek, owne
 register({ name: 'dataorderlastweek', handler: scheduleCmd.handleDataOrderLastWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu lalu (Excel)', category: 'settings' });
 register({ name: 'dataordermonth', handler: scheduleCmd.handleDataOrderMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan ini (Excel)', category: 'settings' });
 register({ name: 'dataorderlastmonth', handler: scheduleCmd.handleDataOrderLastMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan lalu (Excel)', category: 'settings' });
-register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
+register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: true, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
 register({ name: 'setnominal', handler: scheduleCmd.handleSetNominal, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Koreksi nominal order terakhir', category: 'settings' });
 
 // ============ Group Settings ============
