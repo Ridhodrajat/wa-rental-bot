@@ -9,8 +9,7 @@
     "start:sqlite": "node --experimental-sqlite dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
-    "migrate": "ts-node src/database/migrate.ts",
-    "website": "node website/generate.js"
+    "migrate": "ts-node src/database/migrate.ts"
   },
   "keywords": [
     "whatsapp",
