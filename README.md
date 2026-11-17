@@ -15,7 +15,7 @@ WhatsApp Rental Bot dengan sistem multi-grup, manajemen katalog produk, transaks
 - ✅ Dua paket per grup: `trial` (gratis) dan `paid` (berbayar)
 - ✅ Durasi trial bebas diatur owner (default dari `TRIAL_DEFAULT_DAYS`)
 - ✅ Trial dibatasi kuota balasan harian (`TRIAL_DAILY_LIMIT`, default 300)
-- ✅ Trial menampilkan iklan upsell di akhir balasan bot
+- ✅ Trial menampilkan iklan upsell (pesan panjang: banner di atas + lengkap di bawah)
 - ✅ Fitur premium (laporan Excel, jadwal otomatis, branding grup) terkunci di trial
 - ✅ Paket berbayar: tanpa iklan, tanpa batas, semua fitur terbuka
 - ✅ Owner bisa berpindah paket kapan saja via `.setplan`

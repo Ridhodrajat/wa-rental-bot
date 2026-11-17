@@ -37,8 +37,34 @@ export function buildTrialAd(access: PlanAccess): string {
 }
 
 /**
+ * Iklan ringkas satu blok (2 baris) untuk ditaruh di AWAL pesan panjang
+ * seperti katalog dengan banyak produk, supaya tetap terlihat tanpa scroll.
+ */
+export function buildTrialAdCompact(access: PlanAccess): string {
+  return (
+    `🆓 *TRIAL* ${access.used}/${access.limit} · ` +
+    `${formatRupiah(PRICE_WEEKLY)}/minggu · ${formatRupiah(PRICE_MONTHLY)}/bulan\n` +
+    `📩 ${OWNER_WA_LINK}`
+  );
+}
+
+/**
+ * Pesan dianggap panjang bila melebihi ambang ini. Untuk pesan panjang,
+ * iklan ringkas ditaruh di atas agar tidak tenggelam di bawah katalog.
+ */
+const LONG_MESSAGE_CHARS = 900;
+const LONG_MESSAGE_LINES = 18;
+
+export function isLongMessage(text: string): boolean {
+  return text.length > LONG_MESSAGE_CHARS || text.split('\n').length > LONG_MESSAGE_LINES;
+}
+
+/**
  * Tempel iklan ke balasan. Iklan tidak ditempel pada pesan peringatan/error
  * agar tidak mengganggu, dan tidak pernah dobel.
+ *
+ * - Pesan pendek: iklan lengkap di bawah.
+ * - Pesan panjang (katalog banyak produk): iklan ringkas di atas + lengkap di bawah.
  */
 export function appendTrialAd(text: string, access: PlanAccess): string {
   if (!access.isTrial) return text;
@@ -47,6 +73,10 @@ export function appendTrialAd(text: string, access: PlanAccess): string {
   const trimmed = text.trimStart();
   const skipPrefixes = ['⚠️', '⚠', '❌', '⏳', '🔒'];
   if (skipPrefixes.some((prefix) => trimmed.startsWith(prefix))) return text;
+
+  if (isLongMessage(text)) {
+    return `${buildTrialAdCompact(access)}\n\n${text}\n\n${buildTrialAd(access)}`;
+  }
 
   return `${text}\n\n${buildTrialAd(access)}`;
 }

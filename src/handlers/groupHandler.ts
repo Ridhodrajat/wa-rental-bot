@@ -1,6 +1,8 @@
 import type { WASocket, GroupParticipant } from '@whiskeysockets/baileys';
 import { WelcomeGoodbyeRepository } from '../database/repositories/settingsRepository';
 import { RentalService } from '../services/rentalService';
+import { PlanService } from '../services/planService';
+import { buildTrialAdCompact } from '../templates/trialAds';
 import { GroupRepository } from '../database/repositories/groupRepository';
 import { getDefaultTemplate } from '../templates/messageTemplates';
 import { resolveTemplate, displayNameFromJid } from '../utils/placeholder';
@@ -35,6 +37,11 @@ export async function handleGroupParticipantsUpdate(
     const template = config?.welcome_template ?? getDefaultTemplate('welcome');
     if (!config || !config.welcome_enabled) return;
 
+    // Grup trial: tempel iklan ringkas di pesan sambutan agar anggota baru
+    // langsung tahu paket & cara upgrade.
+    const access = PlanService.getAccess(groupId);
+    const adSuffix = access.isTrial ? `\n\n${buildTrialAdCompact(access)}` : '';
+
     for (const participant of participants) {
       const { text, mentions } = resolveTemplate(template, {
         user: displayNameFromJid(participant),
@@ -43,7 +50,7 @@ export async function handleGroupParticipantsUpdate(
       });
 
       await sock.sendMessage(groupId, {
-        text,
+        text: `${text}${adSuffix}`,
         mentions,
       });
     }

@@ -147,6 +147,28 @@ describe('Paket trial vs berbayar', () => {
     expect(appendTrialAd(withAd, access)).toBe(withAd);
   });
 
+  test('pesan pendek: iklan lengkap hanya di bawah', () => {
+    seedRental('trial');
+    const access = PlanService.getAccess(GROUP);
+
+    const withAd = appendTrialAd('Halo kak', access);
+    expect(withAd.startsWith('Halo kak')).toBe(true);
+    expect(withAd.trimEnd().endsWith('╰──────────────')).toBe(true);
+  });
+
+  test('pesan panjang: iklan ringkas di atas + lengkap di bawah', () => {
+    seedRental('trial');
+    const access = PlanService.getAccess(GROUP);
+    const longList = Array.from({ length: 40 }, (_, i) => `│ ${i + 1}. Produk contoh`).join('\n');
+
+    const withAd = appendTrialAd(longList, access);
+    expect(withAd.startsWith('🆓 *TRIAL*')).toBe(true);
+    expect(withAd).toContain('40. Produk contoh');
+    expect(withAd).toContain(TRIAL_AD_MARKER);
+    expect(withAd.indexOf('🆓 *TRIAL*')).toBeLessThan(withAd.indexOf('40. Produk contoh'));
+    expect(withAd.indexOf(TRIAL_AD_MARKER)).toBeGreaterThan(withAd.indexOf('40. Produk contoh'));
+  });
+
   test('iklan tidak ditempel pada pesan error/peringatan', () => {
     seedRental('trial');
     const access = PlanService.getAccess(GROUP);
