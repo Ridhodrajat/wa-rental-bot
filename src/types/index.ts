@@ -1,5 +1,12 @@
 export type RentalStatus = 'ACTIVE' | 'EXPIRED_GRACE' | 'DELETED';
 
+/**
+ * Paket sewa grup:
+ * - `trial` : gratis, ada iklan & batas balasan harian, sebagian fitur terkunci.
+ * - `paid`  : berbayar, tanpa iklan, tanpa batas, semua fitur terbuka.
+ */
+export type RentalPlan = 'trial' | 'paid';
+
 export interface GroupRecord {
   group_id: string; // JID WhatsApp grup (contoh: 1203630123456789@g.us)
   group_name: string;
@@ -12,6 +19,7 @@ export interface RentalRecord {
   id: number;
   group_id: string;
   status: RentalStatus;
+  plan: RentalPlan;
   expires_at: string; // ISO String UTC
   grace_until: string; // ISO String UTC (expires_at + 30 days)
   created_by: string; // Owner number
@@ -150,6 +158,8 @@ export interface ReplyOptions {
   mentions?: string[];
   imagePath?: string | null;
   caption?: string;
+  /** Jangan tempel iklan trial pada balasan ini. */
+  hideAd?: boolean;
 }
 
 export type ReplyFn = (text: string, options?: ReplyOptions) => Promise<any>;
@@ -173,4 +183,10 @@ export interface CommandContext {
   quotedText?: string; // Teks/caption dari pesan yang di-reply
   msg: any;
   groupName?: string;
+  /** Paket grup saat ini (diisi handler untuk grup). */
+  plan?: RentalPlan;
+  /** Sisa kuota balasan trial hari ini (diisi handler untuk grup trial). */
+  trialRemaining?: number;
+  /** Batas kuota balasan trial per hari. */
+  trialLimit?: number;
 }

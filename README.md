@@ -11,6 +11,14 @@ WhatsApp Rental Bot dengan sistem multi-grup, manajemen katalog produk, transaks
 - ✅ Auto backup & restore data grup
 - ✅ Riwayat rental & audit log
 
+### Paket Trial & Berbayar
+- ✅ Dua paket per grup: `trial` (gratis) dan `paid` (berbayar)
+- ✅ Trial dibatasi kuota balasan harian (`TRIAL_DAILY_LIMIT`, default 50)
+- ✅ Trial menampilkan iklan upsell di akhir balasan bot
+- ✅ Fitur premium (laporan Excel, jadwal otomatis, branding grup) terkunci di trial
+- ✅ Paket berbayar: tanpa iklan, tanpa batas, semua fitur terbuka
+- ✅ Owner bisa berpindah paket kapan saja via `.setplan`
+
 ### Manajemen Katalog
 - ✅ Produk katalog terisolasi per grup
 - ✅ Pencarian produk case-insensitive
@@ -80,6 +88,7 @@ DATABASE_PATH=./data/bot.sqlite
 AUTH_DIR=./auth
 LOG_LEVEL=info              # debug, info, warn, error
 NODE_ENV=development        # development atau production
+TRIAL_DAILY_LIMIT=50        # Kuota balasan paket trial per grup per hari
 ```
 
 ### 3. Build TypeScript
@@ -115,12 +124,12 @@ Test coverage:
 | Command | Deskripsi | Contoh |
 |---------|-----------|--------|
 | `.owner` | Info kontak owner | `.owner` |
-| `.addsewa <hari>` | Tambah/perpanjang sewa grup | `.addsewa 30` |
+| `.addsewa <durasi> [trial\|paid]` | Tambah/perpanjang sewa grup | `.addsewa 30h paid` |
+| `.setplan <trial\|paid>` | Ubah paket grup | `.setplan trial` |
+| `.paket` | Lihat paket, kuota & harga | `.paket` |
 | `.delsewa` | Nonaktifkan rental grup | `.delsewa` |
 | `.ceksewa` | Cek status sewa grup | `.ceksewa` |
 | `.listsewa` | List semua rental (owner only) | `.listsewa` |
-| `.pay` | Lihat metode pembayaran | `.pay` |
-| `.setpay <info>` | Atur metode pembayaran | `.setpay BCA: 123456` |
 
 ### Command Katalog (Admin Grup)
 
@@ -246,8 +255,9 @@ wa-rental-bot/
 
 **Tables:**
 - `groups` - Data grup WhatsApp
-- `rentals` - Status sewa per grup
+- `rentals` - Status sewa per grup (termasuk kolom `plan`: `trial` / `paid`)
 - `rental_history` - Audit log rental
+- `daily_usage` - Kuota balasan harian paket trial per grup
 - `products` - Katalog produk per grup
 - `transaction_templates` - Template proses/selesai
 - `welcome_goodbye` - Template welcome/goodbye

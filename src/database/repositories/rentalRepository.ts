@@ -1,5 +1,5 @@
 import { getDatabase } from '../db';
-import { RentalRecord, RentalStatus, RentalHistoryRecord } from '../../types';
+import { RentalRecord, RentalPlan, RentalStatus, RentalHistoryRecord } from '../../types';
 import { nowUtc } from '../../utils/time';
 
 export class RentalRepository {
@@ -38,13 +38,22 @@ export class RentalRepository {
     expires_at: string;
     grace_until: string;
     created_by: string;
+    plan?: RentalPlan;
   }): RentalRecord {
     const db = getDatabase();
     const now = nowUtc();
     db.prepare(`
-      INSERT INTO rentals (group_id, status, expires_at, grace_until, created_by, created_at, updated_at)
-      VALUES (?, 'ACTIVE', ?, ?, ?, ?, ?)
-    `).run(data.group_id, data.expires_at, data.grace_until, data.created_by, now, now);
+      INSERT INTO rentals (group_id, status, plan, expires_at, grace_until, created_by, created_at, updated_at)
+      VALUES (?, 'ACTIVE', ?, ?, ?, ?, ?, ?)
+    `).run(
+      data.group_id,
+      data.plan ?? 'paid',
+      data.expires_at,
+      data.grace_until,
+      data.created_by,
+      now,
+      now
+    );
 
     return this.getByGroupId(data.group_id)!;
   }
@@ -71,6 +80,27 @@ export class RentalRepository {
       nowUtc(),
       groupId
     );
+  }
+
+  /**
+   * Ubah paket sewa grup. Kuota harian trial direset saat berpindah paket
+   * agar grup yang baru upgrade langsung mendapat pengalaman penuh.
+   */
+  static updatePlan(groupId: string, plan: RentalPlan): void {
+    const db = getDatabase();
+    db.prepare('UPDATE rentals SET plan = ?, updated_at = ? WHERE group_id = ?').run(
+      plan,
+      nowUtc(),
+      groupId
+    );
+  }
+
+  static getPlan(groupId: string): RentalPlan | null {
+    const db = getDatabase();
+    const row = db
+      .prepare('SELECT plan FROM rentals WHERE group_id = ?')
+      .get(groupId) as { plan: RentalPlan } | undefined;
+    return row?.plan ?? null;
   }
 
   static delete(groupId: string): void {

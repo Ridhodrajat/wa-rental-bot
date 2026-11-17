@@ -5,12 +5,14 @@ import { collectSenderJids, isOwnerFromJids, isAdminFromJids, isBotAdminFromMeta
 import { getGroupMetadata } from '../connection/whatsapp';
 import { getCommandNames, getCommand } from '../commands/index';
 import { RentalService } from '../services/rentalService';
+import { PlanService, PlanAccess } from '../services/planService';
 import { replyProduct } from '../commands/product';
 import { maybeConfirmPendingOrder } from '../commands/orderConfirm';
 import { GroupRepository } from '../database/repositories/groupRepository';
 import { BlacklistRepository } from '../database/repositories/blacklistRepository';
 import { ModerationRepository } from '../database/repositories/settingsRepository';
 import { containsLink, containsPhoneNumber } from '../utils/moderationDetect';
+import { appendTrialAd, buildLimitNotice, buildPremiumLockedMessage } from '../templates/trialAds';
 import { handlePrivateMessage } from './privateChatHandler';
 import { config } from '../config/env';
 import logger from '../utils/logger';
@@ -98,6 +100,11 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
 
   const isOwnerUser = isOwnerFromJids(allSenderJids, msg);
 
+  // ============ PAKET GRUP (TRIAL / BERBAYAR) ============
+  // Hanya grup yang punya data rental yang punya paket.
+  const hasRental = isGroup && RentalService.getRentalInfo(chatJid) !== null;
+  let planAccess: PlanAccess | null = hasRental ? PlanService.getAccess(chatJid) : null;
+
   let isAdminUser = false;
   let isBotAdminUser = false;
 
@@ -124,15 +131,19 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     }
   }
 
-  // Fungsi reply aman (mendukung teks, mention, dan gambar)
+  // Fungsi reply aman (mendukung teks, mention, dan gambar).
+  // Pada grup trial, iklan upsell ditempel otomatis di akhir balasan.
   const reply: ReplyFn = async (text: string, options?: ReplyOptions): Promise<any> => {
+    const withAd = (value: string): string =>
+      planAccess?.isTrial && !options?.hideAd ? appendTrialAd(value, planAccess) : value;
+
     try {
       if (options?.imagePath) {
         await sock.sendMessage(
           chatJid,
           {
             image: { url: options.imagePath },
-            caption: options.caption ?? text,
+            caption: withAd(options.caption ?? text),
             mentions: options.mentions,
           },
           { quoted: msg }
@@ -140,7 +151,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       } else {
         await sock.sendMessage(
           chatJid,
-          { text, mentions: options?.mentions },
+          { text: withAd(text), mentions: options?.mentions },
           { quoted: msg }
         );
       }
@@ -299,13 +310,36 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     // Command yang dikecualikan dari cek rental aktif
     const exemptCommands = [
       'menu', 'cekmenu', 'owner', 'status', 'bot', 'ceksewa', 'listsewa',
-      'addsewa', 'delsewa', 'antiprivate', 'setprivatelimit', 'autoblock',
-      'cekantiprivate', 'setowner',
+      'addsewa', 'delsewa', 'setplan', 'paket', 'antiprivate', 'setprivatelimit',
+      'autoblock', 'cekantiprivate', 'setowner',
     ];
     if (!exemptCommands.includes(parsed.commandName)) {
       if (isGroup && !RentalService.isRentalActive(chatJid)) {
         await reply('❌ Grup ini belum terdaftar atau masa sewa sudah berakhir.');
         return;
+      }
+    }
+
+    // ============ BATASAN PAKET TRIAL ============
+    if (isGroup && planAccess?.isTrial && !isOwnerUser) {
+      // Fitur premium terkunci pada paket trial.
+      if (cmdDef.premiumOnly) {
+        await reply(buildPremiumLockedMessage(parsed.commandName, planAccess));
+        return;
+      }
+
+      // Command informasi tetap boleh dipakai meski kuota habis,
+      // supaya pengguna bisa melihat cara upgrade.
+      const quotaExempt = ['menu', 'cekmenu', 'owner', 'status', 'bot', 'paket', 'ceksewa'];
+      if (!quotaExempt.includes(parsed.commandName)) {
+        const consumed = PlanService.consume(chatJid);
+        if (!consumed.allowed) {
+          if (PlanService.notifyLimitOnce(chatJid)) {
+            await reply(buildLimitNotice(consumed.access));
+          }
+          return;
+        }
+        planAccess = consumed.access;
       }
     }
 
@@ -329,6 +363,9 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
       quotedText,
       msg,
       groupName,
+      plan: planAccess?.plan,
+      trialRemaining: planAccess?.isTrial ? planAccess.remaining : undefined,
+      trialLimit: planAccess?.isTrial ? planAccess.limit : undefined,
     };
 
     // Dispatch ke command handler
@@ -356,6 +393,9 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
         mentionedJids: [],
         msg,
         groupName,
+        plan: planAccess?.plan,
+        trialRemaining: planAccess?.isTrial ? planAccess.remaining : undefined,
+        trialLimit: planAccess?.isTrial ? planAccess.limit : undefined,
       };
 
       // Konfirmasi pencatatan order dari hasil OCR bukti transfer
@@ -364,6 +404,18 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
 
       // Auto-reply produk (hanya di grup dengan rental aktif)
       if (RentalService.isRentalActive(chatJid)) {
+        // Balasan produk ikut menghabiskan kuota paket trial.
+        if (planAccess?.isTrial && !isOwnerUser) {
+          const consumed = PlanService.consume(chatJid);
+          if (!consumed.allowed) {
+            if (PlanService.notifyLimitOnce(chatJid)) {
+              await reply(buildLimitNotice(consumed.access));
+            }
+            return;
+          }
+          planAccess = consumed.access;
+        }
+
         await replyProduct(ctx, reply);
       }
     }

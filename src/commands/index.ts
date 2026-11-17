@@ -14,6 +14,7 @@ export interface CommandDefinition {
   description: string;
   category: 'owner' | 'product' | 'transaction' | 'welcome' | 'moderation' | 'settings' | 'utility';
   hidden?: boolean; // Alias tersembunyi dari menu
+  premiumOnly?: boolean; // Hanya untuk paket berbayar (terkunci di trial)
 }
 
 import * as ownerCmd from './owner';
@@ -40,13 +41,15 @@ function register(def: CommandDefinition): void {
 }
 
 // ============ Owner & Info ============
-register({ name: 'menu', handler: async (ctx, reply) => { await reply(buildMenu(ctx)); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot', category: 'owner' });
-register({ name: 'cekmenu', handler: async (ctx, reply) => { await reply(buildMenu(ctx)); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot (alias)', category: 'owner', hidden: true });
+register({ name: 'menu', handler: async (ctx, reply) => { await reply(buildMenu(ctx), { hideAd: true }); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot', category: 'owner' });
+register({ name: 'cekmenu', handler: async (ctx, reply) => { await reply(buildMenu(ctx), { hideAd: true }); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot (alias)', category: 'owner', hidden: true });
 register({ name: 'owner', handler: ownerCmd.handleOwnerInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan kontak owner', category: 'owner' });
 register({ name: 'addsewa', handler: ownerCmd.handleAddSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Tambah/perpanjang sewa (owner)', category: 'owner' });
 register({ name: 'delsewa', handler: ownerCmd.handleDelSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Nonaktifkan sewa (owner)', category: 'owner' });
 register({ name: 'ceksewa', handler: ownerCmd.handleCekSewa, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek status sewa grup', category: 'owner' });
 register({ name: 'listsewa', handler: ownerCmd.handleListSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'List semua rental (owner)', category: 'owner' });
+register({ name: 'setplan', handler: ownerCmd.handleSetPlan, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Ubah paket sewa: trial/paid (owner)', category: 'owner' });
+register({ name: 'paket', handler: ownerCmd.handlePlanInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Lihat paket & harga sewa', category: 'owner' });
 
 // ============ Anti Private Chat (Owner) ============
 register({ name: 'antiprivate', handler: ownerCmd.handleAntiPrivate, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Aktifkan/matikan anti private chat', category: 'owner' });
@@ -77,13 +80,13 @@ register({ name: 'setclose', handler: txCmd.handleSetClose, ownerOnly: false, ad
 // ============ Catalog Template ============
 register({ name: 'setlisttemplate', handler: catalogCmd.handleSetListTemplate, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Pilih template katalog', category: 'product' });
 register({ name: 'previewlist', handler: catalogCmd.handlePreviewList, ownerOnly: false, adminOnly: false, groupOnly: true, description: 'Preview katalog', category: 'product' });
-register({ name: 'setlistheader', handler: catalogCmd.handleSetListHeader, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur header katalog manual', category: 'product' });
-register({ name: 'setlistfooter', handler: catalogCmd.handleSetListFooter, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur footer katalog manual', category: 'product' });
+register({ name: 'setlistheader', handler: catalogCmd.handleSetListHeader, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur header katalog manual', category: 'product', premiumOnly: true });
+register({ name: 'setlistfooter', handler: catalogCmd.handleSetListFooter, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur footer katalog manual', category: 'product', premiumOnly: true });
 register({ name: 'resetlisttemplate', handler: catalogCmd.handleResetListTemplate, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Reset template katalog', category: 'product' });
 
-// ============ Catalog Import / Export ============
-register({ name: 'exportlist', handler: catalogIOCmd.handleExportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Export katalog ke Excel/Teks', category: 'product' });
-register({ name: 'importlist', handler: catalogIOCmd.handleImportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Import katalog dari file', category: 'product' });
+// ============ Catalog Import / Export (Berbayar) ============
+register({ name: 'exportlist', handler: catalogIOCmd.handleExportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Export katalog ke Excel/Teks', category: 'product', premiumOnly: true });
+register({ name: 'importlist', handler: catalogIOCmd.handleImportList, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Import katalog dari file', category: 'product', premiumOnly: true });
 
 // ============ Welcome / Goodbye ============
 register({ name: 'welcome', handler: welcomeCmd.handleWelcome, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Kelola welcome (on/off/preview)', category: 'welcome' });
@@ -120,25 +123,25 @@ register({ name: 'deleteblacklist', handler: advModCmd.handleDeleteBlacklist, ow
 register({ name: 'viewblacklist', handler: advModCmd.handleViewBlacklist, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Lihat blacklist', category: 'moderation' });
 register({ name: 'blacklisthelp', handler: advModCmd.handleBlacklistHelp, ownerOnly: false, adminOnly: true, groupOnly: false, description: 'Bantuan blacklist', category: 'moderation' });
 
-// ============ Store Schedule & Data ============
-register({ name: 'autoopen', handler: scheduleCmd.handleAutoOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka otomatis on/off', category: 'settings' });
-register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam buka otomatis', category: 'settings' });
-register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings' });
-register({ name: 'autocloseset', handler: scheduleCmd.handleAutoCloseSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam tutup otomatis', category: 'settings' });
-register({ name: 'dataorder', handler: scheduleCmd.handleDataOrder, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order otomatis on/off', category: 'settings' });
-register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order hari ini (Excel)', category: 'settings' });
-register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order kemarin (Excel)', category: 'settings' });
-register({ name: 'dataorderweek', handler: scheduleCmd.handleDataOrderWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu ini (Excel)', category: 'settings' });
-register({ name: 'dataorderlastweek', handler: scheduleCmd.handleDataOrderLastWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu lalu (Excel)', category: 'settings' });
-register({ name: 'dataordermonth', handler: scheduleCmd.handleDataOrderMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan ini (Excel)', category: 'settings' });
-register({ name: 'dataorderlastmonth', handler: scheduleCmd.handleDataOrderLastMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan lalu (Excel)', category: 'settings' });
-register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: true, groupOnly: false, description: 'Bantuan data order', category: 'settings' });
-register({ name: 'setnominal', handler: scheduleCmd.handleSetNominal, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Koreksi nominal order terakhir', category: 'settings' });
+// ============ Store Schedule & Data (Berbayar) ============
+register({ name: 'autoopen', handler: scheduleCmd.handleAutoOpen, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Buka otomatis on/off', category: 'settings', premiumOnly: true });
+register({ name: 'autoopenset', handler: scheduleCmd.handleAutoOpenSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam buka otomatis', category: 'settings', premiumOnly: true });
+register({ name: 'autoclose', handler: scheduleCmd.handleAutoClose, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Tutup otomatis on/off', category: 'settings', premiumOnly: true });
+register({ name: 'autocloseset', handler: scheduleCmd.handleAutoCloseSet, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Atur jam tutup otomatis', category: 'settings', premiumOnly: true });
+register({ name: 'dataorder', handler: scheduleCmd.handleDataOrder, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order otomatis on/off', category: 'settings', premiumOnly: true });
+register({ name: 'dataordernow', handler: scheduleCmd.handleDataOrderNow, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order hari ini (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataorderlast', handler: scheduleCmd.handleDataOrderLast, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order kemarin (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataorderweek', handler: scheduleCmd.handleDataOrderWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu ini (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataorderlastweek', handler: scheduleCmd.handleDataOrderLastWeek, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order minggu lalu (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataordermonth', handler: scheduleCmd.handleDataOrderMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan ini (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataorderlastmonth', handler: scheduleCmd.handleDataOrderLastMonth, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Laporan order bulan lalu (Excel)', category: 'settings', premiumOnly: true });
+register({ name: 'dataorderhelp', handler: scheduleCmd.handleDataOrderHelp, ownerOnly: false, adminOnly: true, groupOnly: false, description: 'Bantuan data order', category: 'settings', premiumOnly: true });
+register({ name: 'setnominal', handler: scheduleCmd.handleSetNominal, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Koreksi nominal order terakhir', category: 'settings', premiumOnly: true });
 
-// ============ Group Settings ============
-register({ name: 'setppgc', handler: settingsCmd.handleSetPpgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah foto profil grup', category: 'settings' });
-register({ name: 'setnamegc', handler: settingsCmd.handleSetNamegc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah nama grup', category: 'settings' });
-register({ name: 'setdesgc', handler: settingsCmd.handleSetDesgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah deskripsi grup', category: 'settings' });
+// ============ Group Settings (Berbayar) ============
+register({ name: 'setppgc', handler: settingsCmd.handleSetPpgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah foto profil grup', category: 'settings', premiumOnly: true });
+register({ name: 'setnamegc', handler: settingsCmd.handleSetNamegc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah nama grup', category: 'settings', premiumOnly: true });
+register({ name: 'setdesgc', handler: settingsCmd.handleSetDesgc, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Ubah deskripsi grup', category: 'settings', premiumOnly: true });
 register({ name: 'setbot', handler: settingsCmd.handleSetBot, ownerOnly: false, adminOnly: true, groupOnly: true, description: 'Simpan konfigurasi bot', category: 'settings' });
 // Hapus updatesetbot & delsetbot dari registry
 
@@ -164,6 +167,7 @@ export function buildMenu(ctx: CommandContext): string {
   const isOwnerUser = ctx.isOwner;
   const isAdminUser = ctx.isAdmin || ctx.isOwner;
   const p = config_prefix();
+  const isTrial = ctx.plan === 'trial' && !isOwnerUser;
 
   // Kelompokkan command berdasarkan kategori & akses
   const groups: Record<string, string[]> = {
@@ -183,7 +187,10 @@ export function buildMenu(ctx: CommandContext): string {
     if (cmd.adminOnly && !isAdminUser) continue;
     if (cmd.groupOnly && !ctx.isGroup && cmd.category !== 'owner') continue;
 
-    groups[cmd.category]?.push(`${p}${cmd.name} — ${cmd.description}`);
+    // Tampilkan fitur premium dengan penanda 🔒 pada paket trial,
+    // supaya pengguna tahu apa yang akan didapat setelah upgrade.
+    const locked = Boolean(cmd.premiumOnly) && isTrial;
+    groups[cmd.category]?.push(`${locked ? '🔒 ' : ''}${p}${cmd.name} — ${cmd.description}`);
   }
 
   const titleMap: Record<string, string> = {
@@ -200,6 +207,14 @@ export function buildMenu(ctx: CommandContext): string {
   let text = `╭── ꒰ 🤖 ꒱ ──\n`;
   text += `│ *MENU BOT*\n`;
   text += `│ Role: *${roleLabel}*\n`;
+  if (ctx.isGroup && ctx.plan) {
+    const quota =
+      ctx.plan === 'trial' && typeof ctx.trialRemaining === 'number' && ctx.trialLimit
+        ? ` (${ctx.trialRemaining}/${ctx.trialLimit})`
+        : '';
+    const planLabel = ctx.plan === 'trial' ? `🆓 Trial${quota}` : '💎 Berbayar';
+    text += `│ Paket: *${planLabel}*\n`;
+  }
   text += `│ Prefix: \`${p}\`\n`;
   text += `╰───────────────\n`;
 
@@ -213,6 +228,13 @@ export function buildMenu(ctx: CommandContext): string {
   text += `│ Ketik nama produk untuk melihat detail\n`;
   text += `│ Ketik \`${p}list\` untuk melihat katalog\n`;
   text += `╰───────────────`;
+
+  if (isTrial && isAdminUser) {
+    text += `\n\n╭── ꒰ 🔒 ꒱ ──\n`;
+    text += `│ Fitur bertanda 🔒 hanya untuk paket Berbayar\n`;
+    text += `│ Ketik \`${p}paket\` untuk lihat harga & upgrade\n`;
+    text += `╰───────────────`;
+  }
 
   return text;
 }

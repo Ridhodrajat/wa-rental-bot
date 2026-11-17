@@ -292,6 +292,31 @@ const migrations: Migration[] = [
       addCol('autoclose_last', 'TEXT');
     },
   },
+  {
+    id: 5,
+    name: 'trial_plan_and_daily_usage',
+    up: (db) => {
+      // Paket sewa: 'paid' (bawaan, kompatibel dengan data lama) atau 'trial'.
+      const cols = db.prepare('PRAGMA table_info(rentals)').all() as { name: string }[];
+      if (!cols.some((c) => c.name === 'plan')) {
+        db.exec("ALTER TABLE rentals ADD COLUMN plan TEXT NOT NULL DEFAULT 'paid'");
+      }
+
+      // Kuota balasan harian untuk paket trial.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS daily_usage (
+          group_id TEXT NOT NULL,
+          usage_date TEXT NOT NULL,
+          response_count INTEGER NOT NULL DEFAULT 0,
+          limit_notified INTEGER NOT NULL DEFAULT 0,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (group_id, usage_date),
+          FOREIGN KEY (group_id) REFERENCES groups(group_id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_daily_usage_date ON daily_usage(usage_date);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(db: DatabaseSync): void {

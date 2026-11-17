@@ -6,6 +6,8 @@ import { RentalService } from './services/rentalService';
 import { RentalNotificationService } from './services/rentalNotificationService';
 import { BackupService } from './services/backupService';
 import { StoreScheduleService } from './services/storeScheduleService';
+import { UsageRepository } from './database/repositories/usageRepository';
+import { addDays, formatBusinessDate } from './utils/time';
 import logger from './utils/logger';
 
 /**
@@ -53,6 +55,9 @@ async function main(): Promise<void> {
       }
 
       BackupService.createBackup();
+
+      // Buang riwayat kuota trial yang sudah lebih dari 30 hari.
+      UsageRepository.deleteBefore(formatBusinessDate(addDays(new Date(), -30)));
     } catch (error) {
       logger.error({ error }, 'Error pada scheduler');
     }

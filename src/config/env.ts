@@ -52,6 +52,9 @@ const antiprivateEnabled = (process.env.ANTIPRIVATE_ENABLED ?? 'true').toLowerCa
 // Batas ukuran media yang diizinkan (5 MB)
 const maxMediaSizeBytes = parseInt(process.env.MAX_MEDIA_SIZE ?? String(5 * 1024 * 1024), 10);
 
+// Kuota balasan harian untuk paket trial (gratis)
+const trialDailyLimit = parseInt(process.env.TRIAL_DAILY_LIMIT ?? '50', 10);
+
 export const config = {
   ownerNumber,
   ownerName,
@@ -75,6 +78,8 @@ export const config = {
   autoBlockEnabled,
   antiprivateEnabled,
   maxMediaSizeBytes,
+  // Paket trial (gratis)
+  trialDailyLimit: isNaN(trialDailyLimit) || trialDailyLimit <= 0 ? 50 : trialDailyLimit,
 };
 
 export function ensureRuntimeDirs(): void {
