@@ -310,7 +310,7 @@ export async function handleIncomingMessage(sock: WASocket, msg: any): Promise<v
     // Command yang dikecualikan dari cek rental aktif
     const exemptCommands = [
       'menu', 'cekmenu', 'owner', 'status', 'bot', 'ceksewa', 'listsewa',
-      'addsewa', 'delsewa', 'setplan', 'paket', 'antiprivate', 'setprivatelimit',
+      'addsewa', 'trial', 'delsewa', 'setplan', 'paket', 'antiprivate', 'setprivatelimit',
       'autoblock', 'cekantiprivate', 'setowner',
     ];
     if (!exemptCommands.includes(parsed.commandName)) {

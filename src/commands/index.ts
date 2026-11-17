@@ -45,6 +45,7 @@ register({ name: 'menu', handler: async (ctx, reply) => { await reply(buildMenu(
 register({ name: 'cekmenu', handler: async (ctx, reply) => { await reply(buildMenu(ctx), { hideAd: true }); }, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan menu bot (alias)', category: 'owner', hidden: true });
 register({ name: 'owner', handler: ownerCmd.handleOwnerInfo, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Menampilkan kontak owner', category: 'owner' });
 register({ name: 'addsewa', handler: ownerCmd.handleAddSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Tambah/perpanjang sewa (owner)', category: 'owner' });
+register({ name: 'trial', handler: ownerCmd.handleTrial, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Aktifkan trial dengan durasi bebas (owner)', category: 'owner' });
 register({ name: 'delsewa', handler: ownerCmd.handleDelSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'Nonaktifkan sewa (owner)', category: 'owner' });
 register({ name: 'ceksewa', handler: ownerCmd.handleCekSewa, ownerOnly: false, adminOnly: false, groupOnly: false, description: 'Cek status sewa grup', category: 'owner' });
 register({ name: 'listsewa', handler: ownerCmd.handleListSewa, ownerOnly: true, adminOnly: false, groupOnly: false, description: 'List semua rental (owner)', category: 'owner' });

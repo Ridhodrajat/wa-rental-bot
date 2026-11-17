@@ -55,6 +55,9 @@ const maxMediaSizeBytes = parseInt(process.env.MAX_MEDIA_SIZE ?? String(5 * 1024
 // Kuota balasan harian untuk paket trial (gratis)
 const trialDailyLimit = parseInt(process.env.TRIAL_DAILY_LIMIT ?? '300', 10);
 
+// Durasi default trial saat owner memakai `.trial` tanpa argumen (hari)
+const trialDefaultDays = parseInt(process.env.TRIAL_DEFAULT_DAYS ?? '7', 10);
+
 export const config = {
   ownerNumber,
   ownerName,
@@ -80,6 +83,10 @@ export const config = {
   maxMediaSizeBytes,
   // Paket trial (gratis)
   trialDailyLimit: isNaN(trialDailyLimit) || trialDailyLimit <= 0 ? 300 : trialDailyLimit,
+  trialDefaultDays:
+    isNaN(trialDefaultDays) || trialDefaultDays <= 0
+      ? 7
+      : Math.min(trialDefaultDays, 365),
 };
 
 export function ensureRuntimeDirs(): void {

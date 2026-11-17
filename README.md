@@ -13,6 +13,7 @@ WhatsApp Rental Bot dengan sistem multi-grup, manajemen katalog produk, transaks
 
 ### Paket Trial & Berbayar
 - ✅ Dua paket per grup: `trial` (gratis) dan `paid` (berbayar)
+- ✅ Durasi trial bebas diatur owner (default dari `TRIAL_DEFAULT_DAYS`)
 - ✅ Trial dibatasi kuota balasan harian (`TRIAL_DAILY_LIMIT`, default 300)
 - ✅ Trial menampilkan iklan upsell di akhir balasan bot
 - ✅ Fitur premium (laporan Excel, jadwal otomatis, branding grup) terkunci di trial
@@ -89,6 +90,7 @@ AUTH_DIR=./auth
 LOG_LEVEL=info              # debug, info, warn, error
 NODE_ENV=development        # development atau production
 TRIAL_DAILY_LIMIT=300       # Kuota balasan paket trial per grup per hari
+TRIAL_DEFAULT_DAYS=7        # Durasi default `.trial` bila tanpa argumen (hari)
 ```
 
 ### 3. Build TypeScript
@@ -125,6 +127,7 @@ Test coverage:
 |---------|-----------|--------|
 | `.owner` | Info kontak owner | `.owner` |
 | `.addsewa <durasi> [trial\|paid]` | Tambah/perpanjang sewa grup | `.addsewa 30h paid` |
+| `.trial [durasi]` | Aktifkan trial (durasi bebas) | `.trial 3h` |
 | `.setplan <trial\|paid>` | Ubah paket grup | `.setplan trial` |
 | `.paket` | Lihat paket, kuota & harga | `.paket` |
 | `.delsewa` | Nonaktifkan rental grup | `.delsewa` |

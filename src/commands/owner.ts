@@ -114,6 +114,73 @@ export async function handleAddSewa(ctx: CommandContext, reply: ReplyFn): Promis
   }
 }
 
+/**
+ * Aktifkan trial dengan cepat.
+ * Durasi bebas diatur owner; bila kosong memakai TRIAL_DEFAULT_DAYS.
+ */
+export async function handleTrial(ctx: CommandContext, reply: ReplyFn): Promise<void> {
+  if (!ctx.isOwner) {
+    await reply('❌ Perintah ini hanya dapat dijalankan oleh Owner bot.');
+    return;
+  }
+
+  // trial [durasi] di grup
+  // trial <group_id> [durasi] di chat pribadi
+  let targetGroupId = ctx.chatJid;
+  let durationInput: string | undefined;
+
+  if (ctx.isGroup) {
+    durationInput = ctx.args[0];
+  } else {
+    if (!ctx.args[0]) {
+      await reply(
+        '❌ Format chat pribadi:\n' +
+        '*.trial <group_id> [durasi]*\n' +
+        'Contoh: *.trial 1203630123456789@g.us 7h*'
+      );
+      return;
+    }
+    targetGroupId = ctx.args[0];
+    durationInput = ctx.args[1];
+  }
+
+  const effectiveInput = durationInput ?? `${config.trialDefaultDays}h`;
+  const durationMs = parseDurationMs(effectiveInput);
+  if (!durationMs) {
+    await reply(
+      '❌ Format durasi tidak valid.\n' +
+      'Gunakan: *m* (menit), *j* (jam), *h* (hari), atau angka polos (hari).\n' +
+      'Contoh: *.trial 3h* / *.trial 14h*'
+    );
+    return;
+  }
+
+  const existing = RentalService.getRentalInfo(targetGroupId);
+  if (existing && existing.status === 'ACTIVE' && existing.plan === 'paid') {
+    await reply(
+      `❌ Grup ini masih berpaket *Berbayar* sampai ${formatToTimezone(existing.expires_at)}.\n` +
+      'Gunakan *.setplan trial* jika memang ingin menurunkannya ke trial.'
+    );
+    return;
+  }
+
+  try {
+    const result = await RentalService.createOrExtend(targetGroupId, durationMs, ctx.senderNumber);
+    PlanService.setPlan(targetGroupId, 'trial');
+
+    await reply(
+      `✅ *Trial Aktif*\n\n` +
+      `Grup: ${targetGroupId}\n` +
+      `Paket: ${planLabel('trial')}\n` +
+      `Durasi: ${durationInput ?? `${config.trialDefaultDays} hari (default)`}\n` +
+      `Kedaluwarsa: ${formatToTimezone(result.rental.expires_at)}\n` +
+      `Kuota: ${config.trialDailyLimit} balasan/hari`
+    );
+  } catch (error) {
+    await reply('❌ Gagal mengaktifkan trial. Terjadi kesalahan pada database.');
+  }
+}
+
 export async function handleSetPlan(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   if (!ctx.isOwner) {
     await reply('❌ Perintah ini hanya dapat dijalankan oleh Owner bot.');

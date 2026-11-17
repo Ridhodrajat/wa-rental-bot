@@ -23,6 +23,7 @@ import { UsageRepository } from '../src/database/repositories/usageRepository';
 import { RentalService } from '../src/services/rentalService';
 import { PlanService } from '../src/services/planService';
 import { buildMenu, getCommand } from '../src/commands/index';
+import { handleTrial } from '../src/commands/owner';
 import { config } from '../src/config/env';
 import {
   TRIAL_AD_MARKER,
@@ -160,8 +161,8 @@ describe('Paket trial vs berbayar', () => {
     seedRental('trial');
     const access = PlanService.getAccess(GROUP);
 
-    expect(buildLimitNotice(access)).toContain('Rp7.000');
-    expect(buildLimitNotice(access)).toContain('Rp15.000');
+    expect(buildLimitNotice(access)).toContain('Rp5.000');
+    expect(buildLimitNotice(access)).toContain('Rp10.000');
     expect(buildLimitNotice(access)).toContain(config.ownerNumber);
 
     const locked = buildPremiumLockedMessage('dataordernow', access);
@@ -192,5 +193,54 @@ describe('Paket trial vs berbayar', () => {
     for (const name of ['list', 'addlist', 'proses', 'welcome', 'antilink']) {
       expect(getCommand(name)?.premiumOnly).toBeFalsy();
     }
+  });
+
+  test('.trial memakai durasi default yang bisa diatur owner', async () => {
+    const originalDays = config.trialDefaultDays;
+    config.trialDefaultDays = 3;
+    try {
+      const messages: string[] = [];
+      await handleTrial(makeCtx('paid', true), async (text) => {
+        messages.push(text);
+      });
+
+      const rental = RentalRepository.getByGroupId(GROUP)!;
+      expect(rental.plan).toBe('trial');
+      const days = (new Date(rental.expires_at).getTime() - Date.now()) / 86400000;
+      expect(days).toBeGreaterThan(2.9);
+      expect(days).toBeLessThan(3.1);
+      expect(messages.join('\n')).toContain('3 hari (default)');
+    } finally {
+      config.trialDefaultDays = originalDays;
+    }
+  });
+
+  test('.trial menerima durasi bebas dari owner', async () => {
+    const ctx = makeCtx('paid', true);
+    ctx.args = ['2h'];
+    const messages: string[] = [];
+
+    await handleTrial(ctx, async (text) => {
+      messages.push(text);
+    });
+
+    const rental = RentalRepository.getByGroupId(GROUP)!;
+    expect(rental.plan).toBe('trial');
+    const days = (new Date(rental.expires_at).getTime() - Date.now()) / 86400000;
+    expect(days).toBeGreaterThan(1.9);
+    expect(days).toBeLessThan(2.1);
+    expect(messages.join('\n')).toContain('2h');
+  });
+
+  test('.trial menolak menurunkan grup yang masih berbayar aktif', async () => {
+    seedRental('paid');
+    const messages: string[] = [];
+
+    await handleTrial(makeCtx('paid', true), async (text) => {
+      messages.push(text);
+    });
+
+    expect(RentalRepository.getPlan(GROUP)).toBe('paid');
+    expect(messages.join('\n')).toContain('Berbayar');
   });
 });

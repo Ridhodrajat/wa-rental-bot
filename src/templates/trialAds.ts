@@ -9,8 +9,8 @@ import type { PlanAccess } from '../services/planService';
 
 export const TRIAL_AD_MARKER = 'IDAIDO BOT · TRIAL';
 
-export const PRICE_WEEKLY = 7000;
-export const PRICE_MONTHLY = 15000;
+export const PRICE_WEEKLY = 5000;
+export const PRICE_MONTHLY = 10000;
 
 export function formatRupiah(value: number): string {
   return `Rp${value.toLocaleString('id-ID')}`;
