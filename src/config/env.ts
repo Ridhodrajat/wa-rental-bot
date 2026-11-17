@@ -53,7 +53,7 @@ const antiprivateEnabled = (process.env.ANTIPRIVATE_ENABLED ?? 'true').toLowerCa
 const maxMediaSizeBytes = parseInt(process.env.MAX_MEDIA_SIZE ?? String(5 * 1024 * 1024), 10);
 
 // Kuota balasan harian untuk paket trial (gratis)
-const trialDailyLimit = parseInt(process.env.TRIAL_DAILY_LIMIT ?? '50', 10);
+const trialDailyLimit = parseInt(process.env.TRIAL_DAILY_LIMIT ?? '300', 10);
 
 export const config = {
   ownerNumber,
@@ -79,7 +79,7 @@ export const config = {
   antiprivateEnabled,
   maxMediaSizeBytes,
   // Paket trial (gratis)
-  trialDailyLimit: isNaN(trialDailyLimit) || trialDailyLimit <= 0 ? 50 : trialDailyLimit,
+  trialDailyLimit: isNaN(trialDailyLimit) || trialDailyLimit <= 0 ? 300 : trialDailyLimit,
 };
 
 export function ensureRuntimeDirs(): void {
