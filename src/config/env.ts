@@ -72,7 +72,7 @@ export const config = {
   maxMessageLength: 4000,
   // Nama bot
   botName: 'WA Rental Bot',
-  version: '1.0.0',
+  version: '1.1.0',
   // Anti private chat
   privateMessageLimit: isNaN(privateMessageLimit) ? 5 : privateMessageLimit,
   autoBlockEnabled,
