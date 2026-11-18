@@ -88,16 +88,25 @@ async function sendTransaction(
 
 /**
  * Catat order saat admin memakai .done.
- * Format: .done <nominal> [produk]
- * Contoh: .done 50000 | .done 50k Paket A
+ * Format:
+ * - .done (tanpa nominal) → kirim template done saja
+ * - .done <nominal> [produk] → catat order + kirim template
  * 
- * CATATAN: OCR otomatis dinonaktifkan karena tidak reliable di VPS.
- * Admin harus input nominal manual.
+ * Contoh:
+ * - .done → template done biasa
+ * - .done 50000 → catat + template
+ * - .done 50k Paket A → catat + template
  */
 async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   const { product: productFromArgs, amount: explicitAmount } = splitProductAndAmount(ctx.fullArgs);
   const product = productFromArgs || ctx.quotedText?.trim() || null;
 
+  // Jika tidak ada nominal, kirim template done saja (perilaku lama)
+  if (explicitAmount == null) {
+    return;
+  }
+
+  // Ada nominal → catat order
   // Resolusi LID -> nomor telepon asli memakai metadata grup, agar kolom
   // Pembeli/Admin pada laporan menampilkan nomor HP (bukan LID anonim).
   let phoneMap: Map<string, string> | null = null;
@@ -124,31 +133,22 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
   );
   const adminJid = adminNumber ? `${adminNumber}@s.whatsapp.net` : ctx.senderJid;
 
-  // Nominal wajib diisi manual
-  if (explicitAmount != null) {
-    OrderRepository.create({
-      groupId: ctx.chatJid,
-      buyerJid: buyerJid ?? null,
-      buyerNumber: buyerNumber ?? null,
-      product,
-      amount: explicitAmount,
-      source: 'manual',
-      adminJid,
-    });
-    await reply(
-      `🧾 Order dicatat: *${formatRupiah(explicitAmount)}*` + (product ? `\n🛍️ ${product}` : '')
-    );
-    return;
-  }
+  OrderRepository.create({
+    groupId: ctx.chatJid,
+    buyerJid: buyerJid ?? null,
+    buyerNumber: buyerNumber ?? null,
+    product,
+    amount: explicitAmount,
+    source: 'manual',
+    adminJid,
+  });
 
-  // Jika tidak ada nominal, minta input
+  // Tambahkan notifikasi di bawah template done
   await reply(
-    '❌ *Nominal wajib diisi*\n\n' +
-      'Format: *.done <nominal> [produk]*\n' +
-      'Contoh:\n' +
-      '• *.done 50000*\n' +
-      '• *.done 50k*\n' +
-      '• *.done 75000 Paket Premium*'
+    `\n━━━━━━━━━━━━━━━\n` +
+    `🧾 *Order Dicatat*\n` +
+    `💰 ${formatRupiah(explicitAmount)}` +
+    (product ? `\n🛍️ ${product}` : '')
   );
 }
 
