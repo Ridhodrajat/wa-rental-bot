@@ -88,9 +88,11 @@ async function sendTransaction(
 
 /**
  * Catat order saat admin memakai .done.
- * - Nominal eksplisit (mis. .done 50k) -> simpan langsung.
- * - Ada foto bukti transfer -> OCR nominal lalu tunggu konfirmasi admin.
- * - Tanpa nominal & tanpa foto -> tidak mencatat (seperti perilaku lama).
+ * Format: .done <nominal> [produk]
+ * Contoh: .done 50000 | .done 50k Paket A
+ * 
+ * CATATAN: OCR otomatis dinonaktifkan karena tidak reliable di VPS.
+ * Admin harus input nominal manual.
  */
 async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<void> {
   const { product: productFromArgs, amount: explicitAmount } = splitProductAndAmount(ctx.fullArgs);
@@ -122,7 +124,7 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
   );
   const adminJid = adminNumber ? `${adminNumber}@s.whatsapp.net` : ctx.senderJid;
 
-  // 1) Nominal eksplisit -> simpan langsung
+  // Nominal wajib diisi manual
   if (explicitAmount != null) {
     OrderRepository.create({
       groupId: ctx.chatJid,
@@ -139,44 +141,15 @@ async function recordDoneOrder(ctx: CommandContext, reply: ReplyFn): Promise<voi
     return;
   }
 
-  // 2) Ada foto bukti transfer -> OCR & konfirmasi
-  const imageBuffer = await downloadImageBuffer(ctx.msg, getSocket());
-  if (!imageBuffer) return;
-
-  try {
-    await reply('🔎 Membaca foto bukti transfer...');
-    logger.info({ chatJid: ctx.chatJid, bytes: imageBuffer.length }, 'OCR: gambar bukti transfer diterima');
-    const ocrText = await ocrImageText(imageBuffer);
-    const ocrAmount = extractAmountFromText(ocrText);
-    logger.info(
-      { chatJid: ctx.chatJid, textLength: ocrText?.length ?? 0, ocrAmount },
-      'OCR: hasil pembacaan'
-    );
-
-    PendingOrderService.set({
-      groupId: ctx.chatJid,
-      adminJid,
-      product,
-      buyerJid: buyerJid ?? null,
-      buyerNumber: buyerNumber ?? null,
-      amount: ocrAmount,
-    });
-
-    if (ocrAmount != null) {
-      await reply(
-        `🔎 Nominal terbaca: *${formatRupiah(ocrAmount)}*\n\n` +
-          `Balas *ya* untuk menyimpan, atau ketik nominal yang benar (contoh: 50000).`
-      );
-    } else {
-      await reply(
-        '⚠️ Nominal tidak terbaca dari foto.\n\n' +
-          'Ketik nominalnya (contoh: *50000*) untuk menyimpan order, atau *batal*.'
-      );
-    }
-  } catch (error) {
-    logger.error({ error }, 'Gagal memproses OCR order');
-    await reply('⚠️ Gagal membaca foto. Ketik nominal manual, contoh: *.done 50000*');
-  }
+  // Jika tidak ada nominal, minta input
+  await reply(
+    '❌ *Nominal wajib diisi*\n\n' +
+      'Format: *.done <nominal> [produk]*\n' +
+      'Contoh:\n' +
+      '• *.done 50000*\n' +
+      '• *.done 50k*\n' +
+      '• *.done 75000 Paket Premium*'
+  );
 }
 
 // ============ Proses ============
